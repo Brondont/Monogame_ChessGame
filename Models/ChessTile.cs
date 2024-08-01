@@ -10,6 +10,7 @@ namespace ChessGame.Models
 		public Color Color { get; set; }
 		public Rectangle Bounds { get; set; }
 		public string TileCoordinate { get; set; }
+		public bool IsHighlighted { get; set; }
 		private SpriteFont _font;
 		private Texture2D _texture;
 
@@ -43,8 +44,10 @@ namespace ChessGame.Models
 			{
 				throw new InvalidOperationException("Font is not initialized. Ensure LoadContent is called.");
 			}
+			var drawColor = IsHighlighted ? Color.Yellow : Color;
+
 			// Drawing the tile 
-			spriteBatch.Draw(_texture, Bounds, Color);
+			spriteBatch.Draw(_texture, Bounds, drawColor);
 
 			// Draw tile coordinate 
 			var textSize = _font.MeasureString(TileCoordinate);
