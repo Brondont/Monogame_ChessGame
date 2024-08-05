@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace ChessGame
 {
@@ -105,6 +106,18 @@ namespace ChessGame
       return null;
     }
 
+    private ChessPiece GetPieceAtTile(ChessTile tile)
+    {
+      foreach (var piece in _chessPieces)
+      {
+        if (piece.HomeTile == tile)
+        {
+          return piece;
+        }
+      }
+      return null;
+    }
+
     public void LoadContent(GraphicsDevice graphicsDevice, ContentManager content)
     {
       // Load all tile textures
@@ -150,29 +163,58 @@ namespace ChessGame
         // Piece is already selected
         else
         {
+          // get the new tile 
           var newTile = GetTileAtPosition(mousePosition);
 
 
           if (newTile == null)
             return;
 
-          // Move the selected piece to the new tile if it's different and part of the legal moves !
-          if (_selectedPiece.HomeTile != newTile && _highlightedTiles.Contains(newTile))
+          // get piece in the new tile 
+          var capturedPiece = GetPieceAtTile(newTile);
+
+
+          // change the selected piece if the piece is of the same color 
+          if (capturedPiece != null)
           {
-            // Move the piece to the new tile
+            if (capturedPiece.PieceColor == _selectedPiece.PieceColor)
+            {
+              // clear previous highlights
+              foreach (var tile in _highlightedTiles)
+              {
+                tile.IsHighlighted = false;
+              }
+
+              _selectedPiece.IsSelected = false;
+              _selectedPiece = capturedPiece;
+              _highlightedTiles = _selectedPiece.GetValidMoves(_chessBoard, _chessPieces);
+              foreach (var tile in _highlightedTiles)
+              {
+                tile.IsHighlighted = true;
+              }
+              return;
+
+            }
+          }
+          // if its not the same color piece this runs 
+          if (_highlightedTiles.Contains(newTile) && _selectedPiece.HomeTile != newTile)
+          {
+            // capture piece if it exists on new tile 
+            if (capturedPiece != null)
+            {
+              _chessPieces.Remove(capturedPiece);
+            }
+            // move selected piece to new position
             _selectedPiece.MoveTo(newTile);
-
-            // Update the game state after the move
-            _playerTurn = _playerTurn == Player.White ? Player.Black : Player.White;
+            //  switch player
+            foreach (var tile in _highlightedTiles)
+            {
+              tile.IsHighlighted = false;
+            }
+            _playerTurn = _playerTurn == Player.Black ? Player.White : Player.Black;
+            _selectedPiece.IsSelected = false;
+            _selectedPiece = null;
           }
-
-          // Clear tile selection and highlighted tiles
-          _selectedPiece.IsSelected = false;
-          foreach (var tile in _highlightedTiles)
-          {
-            tile.IsHighlighted = false;
-          }
-          _selectedPiece = null;
         }
       }
     }

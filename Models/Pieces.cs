@@ -4,6 +4,26 @@ using System.Collections.Generic;
 
 namespace ChessGame.Models
 {
+  public static class ChessUtils
+  {
+    public static ChessPiece GetPieceAtTile(ChessTile tile, List<ChessPiece> chessPieces)
+    {
+      foreach (var piece in chessPieces)
+      {
+        if (piece.HomeTile == tile)
+        {
+          return piece;
+        }
+      }
+      return null;
+    }
+
+    public static bool IsTileInBounds(int index, int boardSize)
+    {
+      return index >= 0 && index < boardSize;
+    }
+  }
+
   public class Pawn : ChessPiece
   {
     public Pawn(Player color, ChessTile homeTile) : base("pawn", color, homeTile) { }
@@ -17,74 +37,75 @@ namespace ChessGame.Models
       if (currentIndex == -1) return validMoves;
 
       // Move one tile forward
-      int forwardIndex = currentIndex + direction * 8;
-      if (IsTileFree(forwardIndex, chessBoard, chessPieces))
-      {
-        validMoves.Add(chessBoard[forwardIndex]);
-      }
+      AddForwardMove(validMoves, direction, currentIndex, chessBoard, chessPieces);
 
       // Move two tiles forward if at starting position
-      if ((PieceColor == Player.White && HomeTile.TileCoordinate[1] == '2') ||
-          (PieceColor == Player.Black && HomeTile.TileCoordinate[1] == '7'))
-      {
-        int doubleForwardIndex = currentIndex + direction * 16;
-        if (IsTileFree(doubleForwardIndex, chessBoard, chessPieces) && IsTileFree(forwardIndex, chessBoard, chessPieces))
-        {
-          validMoves.Add(chessBoard[doubleForwardIndex]);
-        }
-      }
+      AddDoubleForwardMove(validMoves, direction, currentIndex, chessBoard, chessPieces);
 
       // Capture moves
-      int leftCaptureIndex = currentIndex + direction * 8 - 1;
-      int rightCaptureIndex = currentIndex + direction * 8 + 1;
-
-      if (IsValidCapture(leftCaptureIndex, chessBoard, chessPieces))
-      {
-        validMoves.Add(chessBoard[leftCaptureIndex]);
-      }
-
-      if (IsValidCapture(rightCaptureIndex, chessBoard, chessPieces))
-      {
-        validMoves.Add(chessBoard[rightCaptureIndex]);
-      }
+      AddCaptureMoves(validMoves, direction, currentIndex, chessBoard, chessPieces);
 
       // TODO: Implement en passant capture
 
       return validMoves;
     }
 
-    private bool IsTileFree(int index, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+    private void AddForwardMove(List<ChessTile> validMoves, int direction, int currentIndex, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
     {
-      if (index < 0 || index >= chessBoard.Count)
+      // multiplying by 8 moves the row down by one 
+      int forwardIndex = currentIndex + direction * 8;
+      if (ChessUtils.IsTileInBounds(forwardIndex, chessBoard.Count) && IsTileFree(forwardIndex, chessBoard, chessPieces))
       {
-        return false;
+        validMoves.Add(chessBoard[forwardIndex]);
       }
+    }
 
-      foreach (var piece in chessPieces)
+    private void AddDoubleForwardMove(List<ChessTile> validMoves, int direction, int currentIndex, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+    {
+      // if the pawns are starting position 
+      if ((PieceColor == Player.White && HomeTile.TileCoordinate[1] == '2') ||
+          (PieceColor == Player.Black && HomeTile.TileCoordinate[1] == '7'))
       {
-        if (piece.HomeTile == chessBoard[index])
+        int doubleForwardIndex = currentIndex + direction * 16;
+        int forwardIndex = currentIndex + direction * 8;
+        // check if both tiles infront of the pawn are free 
+        if (ChessUtils.IsTileInBounds(doubleForwardIndex, chessBoard.Count) &&
+            IsTileFree(doubleForwardIndex, chessBoard, chessPieces) &&
+            IsTileFree(forwardIndex, chessBoard, chessPieces))
         {
-          return false;
+          validMoves.Add(chessBoard[doubleForwardIndex]);
         }
       }
-      return true;
+    }
+
+    private void AddCaptureMoves(List<ChessTile> validMoves, int direction, int currentIndex, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+    {
+      // -1 and + 1 to check the front left and front right 
+      int leftCaptureIndex = currentIndex + direction * 8 - 1;
+      int rightCaptureIndex = currentIndex + direction * 8 + 1;
+      // check if enemy piece exists on the left side
+      if (IsValidCapture(leftCaptureIndex, chessBoard, chessPieces))
+      {
+        validMoves.Add(chessBoard[leftCaptureIndex]);
+      }
+      // check if enemy piece exists on the right side 
+      if (IsValidCapture(rightCaptureIndex, chessBoard, chessPieces))
+      {
+        validMoves.Add(chessBoard[rightCaptureIndex]);
+      }
+    }
+
+    private bool IsTileFree(int index, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+    {
+      return ChessUtils.IsTileInBounds(index, chessBoard.Count) &&
+             ChessUtils.GetPieceAtTile(chessBoard[index], chessPieces) == null;
     }
 
     private bool IsValidCapture(int index, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
     {
-      if (index < 0 || index >= chessBoard.Count)
-      {
-        return false;
-      }
-
-      foreach (var piece in chessPieces)
-      {
-        if (piece.HomeTile == chessBoard[index] && piece.PieceColor != this.PieceColor)
-        {
-          return true;
-        }
-      }
-      return false;
+      return ChessUtils.IsTileInBounds(index, chessBoard.Count) &&
+             ChessUtils.GetPieceAtTile(chessBoard[index], chessPieces) is ChessPiece piece &&
+             piece.PieceColor != this.PieceColor;
     }
   }
 
@@ -99,20 +120,47 @@ namespace ChessGame.Models
 
       if (currentIndex == -1) return validMoves;
 
-      // Vertical and horizontal moves
-      for (int i = 1; i < 8; i++)
-      {
-        int upIndex = currentIndex - i * 8;
-        int downIndex = currentIndex + i * 8;
-        int leftIndex = currentIndex - i;
-        int rightIndex = currentIndex + i;
+      // Directions: up, down, left, right
+      int[] directions = { -8, 8, -1, 1 };
 
-        if (upIndex >= 0) validMoves.Add(chessBoard[upIndex]);
-        if (downIndex < chessBoard.Count) validMoves.Add(chessBoard[downIndex]);
-        if (leftIndex >= 0 && leftIndex / 8 == currentIndex / 8) validMoves.Add(chessBoard[leftIndex]);
-        if (rightIndex < chessBoard.Count && rightIndex / 8 == currentIndex / 8) validMoves.Add(chessBoard[rightIndex]);
+      // for every direction
+      foreach (var direction in directions)
+      {
+        // for every tile in that direction
+        for (int i = 1; i < 8; i++)
+        {
+          // i is for board rows 
+          int nextIndex = currentIndex + direction * i;
+
+          if (!IsValidMove(nextIndex, direction, currentIndex, chessBoard.Count))
+            break;
+
+          var targetTile = chessBoard[nextIndex];
+          var occupyingPiece = ChessUtils.GetPieceAtTile(targetTile, chessPieces);
+
+          if (occupyingPiece == null)
+          {
+            validMoves.Add(targetTile);
+          }
+          else
+          {
+            if (occupyingPiece.PieceColor != this.PieceColor)
+            {
+              validMoves.Add(targetTile);
+            }
+            // stop checking futher tiles because its blocked by an early piece 
+            break;
+          }
+        }
       }
+
       return validMoves;
+    }
+
+    private bool IsValidMove(int nextIndex, int direction, int currentIndex, int boardSize)
+    {
+      return ChessUtils.IsTileInBounds(nextIndex, boardSize) &&
+             (direction == -1 || direction == 1 ? nextIndex / 8 == currentIndex / 8 : true);
     }
   }
 
@@ -133,22 +181,35 @@ namespace ChessGame.Models
       foreach (var offset in moveOffsets)
       {
         int newIndex = currentIndex + offset;
-        if (newIndex >= 0 && newIndex < chessBoard.Count)
+
+        if (ChessUtils.IsTileInBounds(newIndex, chessBoard.Count) &&
+            IsValidKnightMove(currentIndex, newIndex))
         {
-          int oldX = currentIndex % 8;
-          int oldY = currentIndex / 8;
-          int newX = newIndex % 8;
-          int newY = newIndex / 8;
-          if (Math.Abs(oldX - newX) == 1 && Math.Abs(oldY - newY) == 2 ||
-              Math.Abs(oldX - newX) == 2 && Math.Abs(oldY - newY) == 1)
+          var targetTile = chessBoard[newIndex];
+          var occupyingPiece = ChessUtils.GetPieceAtTile(targetTile, chessPieces);
+
+          if (occupyingPiece == null || occupyingPiece.PieceColor != this.PieceColor)
           {
-            validMoves.Add(chessBoard[newIndex]);
+            validMoves.Add(targetTile);
           }
         }
       }
+
       return validMoves;
     }
+
+    private bool IsValidKnightMove(int currentIndex, int newIndex)
+    {
+      int oldX = currentIndex % 8;
+      int oldY = currentIndex / 8;
+      int newX = newIndex % 8;
+      int newY = newIndex / 8;
+
+      return (Math.Abs(oldX - newX) == 1 && Math.Abs(oldY - newY) == 2) ||
+             (Math.Abs(oldX - newX) == 2 && Math.Abs(oldY - newY) == 1);
+    }
   }
+
   public class Bishop : ChessPiece
   {
     public Bishop(Player color, ChessTile homeTile) : base("bishop", color, homeTile) { }
@@ -169,26 +230,36 @@ namespace ChessGame.Models
         {
           int newIndex = currentIndex + i * direction;
 
-          // Check if the new index is out of bounds or invalid
-          if (newIndex < 0 || newIndex >= chessBoard.Count)
+          if (!IsValidMove(newIndex, direction, currentIndex, chessBoard.Count))
             break;
 
-          // Check if the move wraps around the board horizontally
-          int oldX = currentIndex % 8;
-          int newX = newIndex % 8;
+          var targetTile = chessBoard[newIndex];
+          var occupyingPiece = ChessUtils.GetPieceAtTile(targetTile, chessPieces);
 
-          if (Math.Abs(oldX - newX) != i)
+          if (occupyingPiece == null)
+          {
+            validMoves.Add(targetTile);
+          }
+          else
+          {
+            if (occupyingPiece.PieceColor != this.PieceColor)
+            {
+              validMoves.Add(targetTile);
+            }
             break;
-
-          validMoves.Add(chessBoard[newIndex]);
-
+          }
         }
       }
 
       return validMoves;
     }
-  }
 
+    private bool IsValidMove(int newIndex, int direction, int currentIndex, int boardSize)
+    {
+      return ChessUtils.IsTileInBounds(newIndex, boardSize) &&
+             Math.Abs(currentIndex % 8 - newIndex % 8) == Math.Abs(currentIndex / 8 - newIndex / 8);
+    }
+  }
 
   public class Queen : ChessPiece
   {
@@ -201,6 +272,7 @@ namespace ChessGame.Models
       // Combine moves of Rook and Bishop
       validMoves.AddRange(new Rook(PieceColor, HomeTile).GetValidMoves(chessBoard, chessPieces));
       validMoves.AddRange(new Bishop(PieceColor, HomeTile).GetValidMoves(chessBoard, chessPieces));
+
       return validMoves;
     }
   }
@@ -222,19 +294,31 @@ namespace ChessGame.Models
       foreach (var offset in moveOffsets)
       {
         int newIndex = currentIndex + offset;
-        if (newIndex >= 0 && newIndex < chessBoard.Count)
+
+        if (ChessUtils.IsTileInBounds(newIndex, chessBoard.Count) &&
+            IsValidKingMove(currentIndex, newIndex))
         {
-          int oldX = currentIndex % 8;
-          int oldY = currentIndex / 8;
-          int newX = newIndex % 8;
-          int newY = newIndex / 8;
-          if (Math.Abs(oldX - newX) <= 1 && Math.Abs(oldY - newY) <= 1)
+          var targetTile = chessBoard[newIndex];
+          var occupyingPiece = ChessUtils.GetPieceAtTile(targetTile, chessPieces);
+
+          if (occupyingPiece == null || occupyingPiece.PieceColor != this.PieceColor)
           {
-            validMoves.Add(chessBoard[newIndex]);
+            validMoves.Add(targetTile);
           }
         }
       }
+
       return validMoves;
+    }
+
+    private bool IsValidKingMove(int currentIndex, int newIndex)
+    {
+      int oldX = currentIndex % 8;
+      int oldY = currentIndex / 8;
+      int newX = newIndex % 8;
+      int newY = newIndex / 8;
+
+      return Math.Abs(oldX - newX) <= 1 && Math.Abs(oldY - newY) <= 1;
     }
   }
 }
