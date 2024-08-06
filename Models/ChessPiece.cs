@@ -54,6 +54,49 @@ namespace ChessGame.Models
       HomeTile = newTile;
     }
 
-    public abstract List<ChessTile> GetValidMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces);
+    public abstract List<ChessTile> GetLegalMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces);
+
+    public List<ChessTile> GetLegalSafeMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+    {
+      // pass each move through the is safe move to check whether that move leads to their king being in check 
+      var legalMoves = GetLegalMoves(chessBoard, chessPieces);
+      var safeMoves = new List<ChessTile>();
+      foreach (var legalMove in legalMoves)
+      {
+        if (IsSafeMove(legalMove, chessBoard, chessPieces))
+        {
+          safeMoves.Add(legalMove);
+        }
+      }
+
+      return safeMoves;
+    }
+
+    // checks if the move causes king to be in check
+    public bool IsSafeMove(ChessTile targetTile, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+    {
+      // Save the current state
+      ChessTile originalTile = this.HomeTile;
+      ChessPiece capturedPiece = ChessUtils.GetPieceAtTile(targetTile, chessPieces);
+
+      // Simulate the move
+      this.HomeTile = targetTile;
+      if (capturedPiece != null)
+      {
+        chessPieces.Remove(capturedPiece);
+      }
+
+      // Check if the king is in check
+      bool isInCheck = ChessUtils.IsKingInCheck(this.PieceColor, chessBoard, chessPieces);
+
+      // Revert the move
+      this.HomeTile = originalTile;
+      if (capturedPiece != null)
+      {
+        chessPieces.Add(capturedPiece);
+      }
+
+      return !isInCheck;
+    }
   }
 }

@@ -5,7 +5,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace ChessGame
 {
@@ -22,8 +21,10 @@ namespace ChessGame
     private List<ChessPiece> _chessPieces;
     private SpriteFont _font;
     private ChessPiece _selectedPiece;
-    private List<ChessTile> _highlightedTiles;
-    public Player _playerTurn { get; private set; } = Player.White;
+    private List<ChessTile> _legalMoves;
+
+    public Player PlayerTurn { get; private set; } = Player.White;
+    public bool IsInCheck { get; private set; } = false;
 
     public Board(SpriteFont font)
     {
@@ -118,6 +119,7 @@ namespace ChessGame
       return null;
     }
 
+
     public void LoadContent(GraphicsDevice graphicsDevice, ContentManager content)
     {
       // Load all tile textures
@@ -141,80 +143,93 @@ namespace ChessGame
       {
         if (_selectedPiece == null)
         {
-          foreach (var piece in _chessPieces)
-          {
-            if (piece.HomeTile.Bounds.Contains(mousePosition))
-            {
-              // Check if the clicked piece belongs to the active player 
-              if (_playerTurn != piece.PieceColor) return;
-
-              _selectedPiece = piece;
-              piece.IsSelected = true;
-              // Highlight the legal tiles that the piece can move to after selecting it 
-              _highlightedTiles = _selectedPiece.GetValidMoves(_chessBoard, _chessPieces);
-              foreach (var tile in _highlightedTiles)
-              {
-                tile.IsHighlighted = true;
-              }
-              break;
-            }
-          }
+          SelectPiece(mousePosition);
         }
-        // Piece is already selected
         else
         {
-          // get the new tile 
-          var newTile = GetTileAtPosition(mousePosition);
+          MoveSelectedPiece(mousePosition);
+        }
+      }
+    }
+
+    private void SelectPiece(Vector2 mousePosition)
+    {
+      foreach (var piece in _chessPieces)
+      {
+        if (piece.HomeTile.Bounds.Contains(mousePosition) && piece.PieceColor == PlayerTurn)
+        {
+          _selectedPiece = piece;
+          piece.IsSelected = true;
+
+          _legalMoves = _selectedPiece.GetLegalSafeMoves(_chessBoard, _chessPieces);
+
+          HighlightTiles(_legalMoves, true);
+          break;
+        }
+      }
+    }
+
+    private void ChangeSelectedPiece(ChessPiece capturedPiece)
+    {
+      HighlightTiles(_legalMoves, false);
+
+      _selectedPiece.IsSelected = false;
+      _selectedPiece = capturedPiece;
+
+      _legalMoves = _selectedPiece.GetLegalSafeMoves(_chessBoard, _chessPieces);
+      HighlightTiles(_legalMoves, true);
+    }
 
 
-          if (newTile == null)
-            return;
+    private void MoveSelectedPiece(Vector2 mousePosition)
+    {
+      var newTile = GetTileAtPosition(mousePosition);
+      if (newTile == null) return;
 
-          // get piece in the new tile 
-          var capturedPiece = GetPieceAtTile(newTile);
+      var capturedPiece = GetPieceAtTile(newTile);
+      // if the tile clicked is of the same color as the player select it instead
+      if (capturedPiece != null && capturedPiece.PieceColor == _selectedPiece.PieceColor)
+      {
+        ChangeSelectedPiece(capturedPiece);
+        return;
+      }
 
+      if (_legalMoves.Contains(newTile) && _selectedPiece.HomeTile != newTile)
+      {
+        if (capturedPiece != null)
+        {
+          _chessPieces.Remove(capturedPiece);
+        }
+        _selectedPiece.MoveTo(newTile);
 
-          // change the selected piece if the piece is of the same color 
-          if (capturedPiece != null)
-          {
-            if (capturedPiece.PieceColor == _selectedPiece.PieceColor)
-            {
-              // clear previous highlights
-              foreach (var tile in _highlightedTiles)
-              {
-                tile.IsHighlighted = false;
-              }
+        UpdatePlayerTurnAndCheckStatus();
 
-              _selectedPiece.IsSelected = false;
-              _selectedPiece = capturedPiece;
-              _highlightedTiles = _selectedPiece.GetValidMoves(_chessBoard, _chessPieces);
-              foreach (var tile in _highlightedTiles)
-              {
-                tile.IsHighlighted = true;
-              }
-              return;
+        HighlightTiles(_legalMoves, false);
+        _selectedPiece.IsSelected = false;
+        _selectedPiece = null;
+      }
+    }
 
-            }
-          }
-          // if its not the same color piece this runs 
-          if (_highlightedTiles.Contains(newTile) && _selectedPiece.HomeTile != newTile)
-          {
-            // capture piece if it exists on new tile 
-            if (capturedPiece != null)
-            {
-              _chessPieces.Remove(capturedPiece);
-            }
-            // move selected piece to new position
-            _selectedPiece.MoveTo(newTile);
-            //  switch player
-            foreach (var tile in _highlightedTiles)
-            {
-              tile.IsHighlighted = false;
-            }
-            _playerTurn = _playerTurn == Player.Black ? Player.White : Player.Black;
-            _selectedPiece.IsSelected = false;
-            _selectedPiece = null;
-          }
+    private static void HighlightTiles(List<ChessTile> tiles, bool highlight)
+    {
+      foreach (var tile in tiles)
+      {
+        tile.IsHighlighted = highlight;
+      }
+    }
+
+    private void UpdatePlayerTurnAndCheckStatus()
+    {
+      PlayerTurn = PlayerTurn == Player.Black ? Player.White : Player.Black;
+      IsInCheck = false;
+
+      foreach (var tile in _selectedPiece.GetLegalSafeMoves(_chessBoard, _chessPieces))
+      {
+        var tilePiece = GetPieceAtTile(tile);
+        if (tilePiece != null && tilePiece.PieceColor == PlayerTurn && tilePiece.Type == "king")
+        {
+          IsInCheck = true;
+          break;
         }
       }
     }
