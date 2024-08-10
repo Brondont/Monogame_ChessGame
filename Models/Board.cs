@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 
-namespace ChessGame
+namespace ChessGame.Models
 {
   public enum Player
   {
@@ -22,6 +22,8 @@ namespace ChessGame
     private SpriteFont _font;
     private ChessPiece _selectedPiece;
     private List<ChessTile> _legalMoves;
+    private MouseState _currentMouse;
+    private MouseState _prevMouse;
 
     public Player PlayerTurn { get; private set; } = Player.White;
     public bool IsInCheck { get; private set; } = false;
@@ -135,11 +137,14 @@ namespace ChessGame
       }
     }
 
-    public void Update(MouseState mouseState, MouseState previousMouseState)
+    public void Update()
     {
-      var mousePosition = new Vector2(mouseState.X, mouseState.Y);
+      _prevMouse = _currentMouse;
+      _currentMouse = Mouse.GetState();
 
-      if (previousMouseState.LeftButton == ButtonState.Released && mouseState.LeftButton == ButtonState.Pressed)
+      var mousePosition = new Vector2(_currentMouse.X, _currentMouse.Y);
+
+      if (_prevMouse.LeftButton == ButtonState.Released && _currentMouse.LeftButton == ButtonState.Pressed)
       {
         if (_selectedPiece == null)
         {
@@ -229,9 +234,27 @@ namespace ChessGame
         if (tilePiece != null && tilePiece.PieceColor == PlayerTurn && tilePiece.Type == "king")
         {
           IsInCheck = true;
+          IsMate();
           break;
         }
       }
+    }
+
+    private void IsMate()
+    {
+      foreach (var piece in _chessPieces)
+      {
+        if (piece.PieceColor == PlayerTurn)
+        {
+          var legalMoves = piece.GetLegalSafeMoves(_chessBoard, _chessPieces);
+          if (legalMoves.Count != 0)
+          {
+            return;
+          }
+        }
+      }
+      // if it went over all the pieces and there is no legal move left for player its checkmate 
+      PlayerTurn = Player.None;
     }
 
     public void Draw(SpriteBatch spriteBatch)

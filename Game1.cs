@@ -1,4 +1,6 @@
-﻿using ChessGame.Models;
+﻿using System;
+using ChessGame.Models;
+using ChessGame.State;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -9,9 +11,9 @@ namespace ChessGame
 	{
 		private GraphicsDeviceManager _graphics;
 		private SpriteBatch _spriteBatch;
+		private Menu _menu;
 		private Board _board;
-		private MouseState mouseState;
-		private MouseState previousMouseState;
+		private bool isGameStarted;
 
 		public Game1()
 		{
@@ -22,19 +24,16 @@ namespace ChessGame
 			_graphics.PreferredBackBufferHeight = 600; // Default height
 			_graphics.ApplyChanges();
 			Window.AllowUserResizing = true;
-		}
-
-		protected override void Initialize()
-		{
-			base.Initialize();
+			isGameStarted = false;
 		}
 
 		protected override void LoadContent()
 		{
 			_spriteBatch = new SpriteBatch(GraphicsDevice);
 			SpriteFont font = Content.Load<SpriteFont>("fonts/DejaVuSans");
-			_board = new Board(font);
-			_board.LoadContent(GraphicsDevice, Content);
+
+			// Initialize the menu with the font and screen size
+			_menu = new Menu(font, new Vector2(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height));
 		}
 
 		protected override void Update(GameTime gameTime)
@@ -42,12 +41,47 @@ namespace ChessGame
 			if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
 				Exit();
 
-			previousMouseState = mouseState;
-			mouseState = Mouse.GetState();
+			if (!isGameStarted)
+			{
+				// update menu for clicks
+				_menu.Update(gameTime);
 
-			_board.Update(mouseState, previousMouseState);
+				StartGame();
+			}
+			else
+			{
+				_board.Update();
+			}
 
 			base.Update(gameTime);
+		}
+
+		private void StartGame()
+		{
+			SpriteFont font = Content.Load<SpriteFont>("fonts/DejaVuSans");
+
+			// Initialize the board based on the selected menu option
+			Console.Write(_menu.GetSelectedIndex());
+			switch (_menu.GetSelectedIndex())
+			{
+				case 0:
+					// Start 1v1 game
+					_board = new Board(font);
+					break;
+				case 1:
+					// Start 1v Stockfish game
+					_board = new Board(font);
+					break;
+				case 2:
+					// Start 1v Personal Engine game
+					_board = new Board(font);
+					break;
+				default:
+					return;
+			}
+
+			_board.LoadContent(GraphicsDevice, Content);
+			isGameStarted = true;
 		}
 
 		protected override void Draw(GameTime gameTime)
@@ -55,7 +89,16 @@ namespace ChessGame
 			GraphicsDevice.Clear(Color.CornflowerBlue);
 
 			_spriteBatch.Begin();
-			_board.Draw(_spriteBatch);
+			if (!isGameStarted)
+			{
+				// Draw the menu
+				_menu.Draw(_spriteBatch);
+			}
+			else
+			{
+				// Draw the board
+				_board.Draw(_spriteBatch);
+			}
 			_spriteBatch.End();
 
 			base.Draw(gameTime);
