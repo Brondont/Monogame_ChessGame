@@ -5,6 +5,13 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
+enum GameState
+{
+	MainMenu,
+	Gameplay,
+	EndOfGame,
+}
+
 namespace ChessGame
 {
 	public class Game1 : Game
@@ -13,27 +20,27 @@ namespace ChessGame
 		private SpriteBatch _spriteBatch;
 		private Menu _menu;
 		private Board _board;
-		private bool isGameStarted;
+		private EndMenu _endMenu;
+		private GameState _state;
+		private SpriteFont _font;
 
 		public Game1()
 		{
 			_graphics = new GraphicsDeviceManager(this);
 			Content.RootDirectory = "Content";
 			IsMouseVisible = true;
-			_graphics.PreferredBackBufferWidth = 800; // Default width
-			_graphics.PreferredBackBufferHeight = 600; // Default height
+			_graphics.PreferredBackBufferWidth = 800;
+			_graphics.PreferredBackBufferHeight = 600;
 			_graphics.ApplyChanges();
 			Window.AllowUserResizing = true;
-			isGameStarted = false;
+			_state = GameState.MainMenu;
 		}
 
 		protected override void LoadContent()
 		{
 			_spriteBatch = new SpriteBatch(GraphicsDevice);
-			SpriteFont font = Content.Load<SpriteFont>("fonts/DejaVuSans");
-
-			// Initialize the menu with the font and screen size
-			_menu = new Menu(font, new Vector2(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height));
+			_font = Content.Load<SpriteFont>("fonts/DejaVuSans");
+			_menu = new Menu(_font, GetViewportSize());
 		}
 
 		protected override void Update(GameTime gameTime)
@@ -41,47 +48,85 @@ namespace ChessGame
 			if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
 				Exit();
 
-			if (!isGameStarted)
+			switch (_state)
 			{
-				// update menu for clicks
-				_menu.Update(gameTime);
-
-				StartGame();
-			}
-			else
-			{
-				_board.Update();
+				case GameState.MainMenu:
+					UpdateMenu(gameTime);
+					break;
+				case GameState.Gameplay:
+					UpdateBoard(gameTime);
+					break;
+				case GameState.EndOfGame:
+					UpdateEndOfGame(gameTime);
+					break;
 			}
 
 			base.Update(gameTime);
 		}
 
+		private void UpdateMenu(GameTime gameTime)
+		{
+			_menu.Update(gameTime);
+
+			if (_menu.GetSelectedIndex() != -1)
+				StartGame();
+		}
+
+		private void UpdateBoard(GameTime gameTime)
+		{
+			_board?.Update(gameTime);
+
+			if (_board?.PlayerTurn == Player.None)
+			{
+				_state = GameState.EndOfGame;
+				_endMenu = new EndMenu(_font, GetViewportSize(), _board.GameResult);
+			}
+		}
+
+		private void UpdateEndOfGame(GameTime gameTime)
+		{
+			_endMenu?.Update(gameTime);
+
+			if (_endMenu.Reset)
+			{
+				ResetGame();
+			}
+		}
+
 		private void StartGame()
 		{
-			SpriteFont font = Content.Load<SpriteFont>("fonts/DejaVuSans");
+			_board = CreateBoardBasedOnSelection();
+			_board?.LoadContent(GraphicsDevice, Content);
+			_state = GameState.Gameplay;
+		}
 
-			// Initialize the board based on the selected menu option
-			Console.Write(_menu.GetSelectedIndex());
+		private Board CreateBoardBasedOnSelection()
+		{
 			switch (_menu.GetSelectedIndex())
 			{
 				case 0:
-					// Start 1v1 game
-					_board = new Board(font);
-					break;
+					return new Board(_font); // 1v1 game
 				case 1:
-					// Start 1v Stockfish game
-					_board = new Board(font);
-					break;
+					return new Board(_font); // 1v Stockfish game
 				case 2:
-					// Start 1v Personal Engine game
-					_board = new Board(font);
-					break;
+					return new Board(_font); // 1v Personal Engine game
 				default:
-					return;
+					return null;
 			}
+		}
 
-			_board.LoadContent(GraphicsDevice, Content);
-			isGameStarted = true;
+		private void ResetGame()
+		{
+			// Menu re-initialization should be handled carefully since it depends on loaded content.
+			_menu = new Menu(_font, GetViewportSize());
+			_board = null;
+			_endMenu = null;
+			_state = GameState.MainMenu;
+		}
+
+		private Vector2 GetViewportSize()
+		{
+			return new Vector2(GraphicsDevice.Viewport.Width, GraphicsDevice.Viewport.Height);
 		}
 
 		protected override void Draw(GameTime gameTime)
@@ -89,15 +134,17 @@ namespace ChessGame
 			GraphicsDevice.Clear(Color.CornflowerBlue);
 
 			_spriteBatch.Begin();
-			if (!isGameStarted)
+			switch (_state)
 			{
-				// Draw the menu
-				_menu.Draw(_spriteBatch);
-			}
-			else
-			{
-				// Draw the board
-				_board.Draw(_spriteBatch);
+				case GameState.MainMenu:
+					_menu?.Draw(_spriteBatch);
+					break;
+				case GameState.Gameplay:
+					_board?.Draw(_spriteBatch);
+					break;
+				case GameState.EndOfGame:
+					_endMenu?.Draw(_spriteBatch);
+					break;
 			}
 			_spriteBatch.End();
 

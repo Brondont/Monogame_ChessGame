@@ -25,6 +25,7 @@ namespace ChessGame.Models
     private MouseState _currentMouse;
     private MouseState _prevMouse;
 
+    public string GameResult;
     public Player PlayerTurn { get; private set; } = Player.White;
     public bool IsInCheck { get; private set; } = false;
 
@@ -137,7 +138,7 @@ namespace ChessGame.Models
       }
     }
 
-    public void Update()
+    public void Update(GameTime gameTime)
     {
       _prevMouse = _currentMouse;
       _currentMouse = Mouse.GetState();
@@ -254,6 +255,7 @@ namespace ChessGame.Models
         }
       }
       // if it went over all the pieces and there is no legal move left for player its checkmate 
+      GameResult = PlayerTurn == Player.Black ? "White won!" : "Black Won !";
       PlayerTurn = Player.None;
     }
 
