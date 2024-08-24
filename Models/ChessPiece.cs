@@ -11,10 +11,12 @@ namespace ChessGame.Models
     public Player PieceColor { get; set; }
     public ChessTile HomeTile { get; set; }
     public bool IsSelected { get; set; }
+    public bool HasMoved;
     private Texture2D _texture;
 
     protected ChessPiece(string type, Player color, ChessTile homeTile)
     {
+      HasMoved = false;
       Type = type;
       PieceColor = color;
       HomeTile = homeTile;
@@ -51,6 +53,7 @@ namespace ChessGame.Models
 
     public void MoveTo(ChessTile newTile)
     {
+      HasMoved = true;
       HomeTile = newTile;
     }
 

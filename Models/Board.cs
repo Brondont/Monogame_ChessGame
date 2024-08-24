@@ -43,12 +43,12 @@ namespace ChessGame.Models
     {
       _chessBoard.Clear();
       int screenWidth = 800; // Default width
-      int screenHeight = 600; // Default height
-      int boardSize = Math.Min(screenWidth, screenHeight) * 7 / 8; // 7/8 of the smaller dimension
+      int screenHeight = 800; // Default height
+      int boardSize = Math.Min(screenWidth, screenHeight);
       int tileSize = boardSize / 8;
 
-      int startX = (screenWidth - boardSize) / 2;
-      int startY = (screenHeight - boardSize) / 2;
+      int startX = (screenWidth - boardSize);
+      int startY = (screenHeight - boardSize);
 
       bool isWhite = true;
       for (int y = 0; y < 8; y++)

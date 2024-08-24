@@ -30,7 +30,7 @@ namespace ChessGame
 			Content.RootDirectory = "Content";
 			IsMouseVisible = true;
 			_graphics.PreferredBackBufferWidth = 800;
-			_graphics.PreferredBackBufferHeight = 600;
+			_graphics.PreferredBackBufferHeight = 800;
 			_graphics.ApplyChanges();
 			Window.AllowUserResizing = true;
 			_state = GameState.MainMenu;
@@ -95,25 +95,22 @@ namespace ChessGame
 
 		private void StartGame()
 		{
-			_board = CreateBoardBasedOnSelection();
+			switch (_menu.GetSelectedIndex())
+			{
+				case 0:
+					_board = new Board(_font); // 1v1 game
+					break;
+				case 1:
+					_board = new Board(_font); // 1v Stockfish game
+					break;
+				case 2:
+					_board = new Board(_font); // 1v Personal Engine game
+					break;
+			}
 			_board?.LoadContent(GraphicsDevice, Content);
 			_state = GameState.Gameplay;
 		}
 
-		private Board CreateBoardBasedOnSelection()
-		{
-			switch (_menu.GetSelectedIndex())
-			{
-				case 0:
-					return new Board(_font); // 1v1 game
-				case 1:
-					return new Board(_font); // 1v Stockfish game
-				case 2:
-					return new Board(_font); // 1v Personal Engine game
-				default:
-					return null;
-			}
-		}
 
 		private void ResetGame()
 		{

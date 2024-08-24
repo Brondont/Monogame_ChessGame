@@ -83,8 +83,7 @@ namespace ChessGame.Models
     private void AddDoubleForwardMove(List<ChessTile> validMoves, int direction, int currentIndex, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
     {
       // if the pawns are starting position 
-      if ((PieceColor == Player.White && HomeTile.TileCoordinate[1] == '2') ||
-          (PieceColor == Player.Black && HomeTile.TileCoordinate[1] == '7'))
+      if (!HasMoved)
       {
         int doubleForwardIndex = currentIndex + direction * 16;
         int forwardIndex = currentIndex + direction * 8;
@@ -326,8 +325,15 @@ namespace ChessGame.Models
         }
       }
 
+      // Add castling moves if eligible
+      if (!HasMoved)
+      {
+        AddCastlingMoves(validMoves, chessBoard, chessPieces);
+      }
+
       return validMoves;
     }
+
     private static bool IsValidKingMove(int currentIndex, int newIndex)
     {
       int oldX = currentIndex % 8;
@@ -338,6 +344,55 @@ namespace ChessGame.Models
       // checks if the distance between the current move and next move is one tile only
       return Math.Abs(oldX - newX) <= 1 && Math.Abs(oldY - newY) <= 1;
     }
-    // TODO: add castles to the moveset 
+
+    private void AddCastlingMoves(List<ChessTile> validMoves, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+    {
+      int currentIndex = chessBoard.IndexOf(HomeTile);
+      var rooks = chessPieces.FindAll(p => p.Type == "rook" && p.PieceColor == PieceColor && !p.HasMoved);
+
+      ChessPiece qRook = null;
+      ChessPiece kRook = null;
+
+      foreach (var rook in rooks)
+      {
+        int rookIndex = chessBoard.IndexOf(rook.HomeTile);
+        if (rookIndex < currentIndex)
+          qRook = rook;  // Queenside rook
+        else
+          kRook = rook;  // Kingside rook
+      }
+
+      // Check kingside castling
+      if (kRook != null)
+      {
+        bool isPathClear = true;
+        for (int i = 1; i <= 2; i++)
+        {
+          if (ChessUtils.GetPieceAtTile(chessBoard[currentIndex + i], chessPieces) != null)
+          {
+            isPathClear = false;
+            break;
+          }
+        }
+        if (isPathClear)
+          validMoves.Add(chessBoard[currentIndex + 2]);
+      }
+
+      // Check queenside castling
+      if (qRook != null)
+      {
+        bool isPathClear = true;
+        for (int i = 1; i <= 3; i++)
+        {
+          if (ChessUtils.GetPieceAtTile(chessBoard[currentIndex - i], chessPieces) != null)
+          {
+            isPathClear = false;
+            break;
+          }
+        }
+        if (isPathClear)
+          validMoves.Add(chessBoard[currentIndex - 2]);
+      }
+    }
   }
 }
