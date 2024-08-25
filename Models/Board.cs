@@ -47,8 +47,8 @@ namespace ChessGame.Models
       int boardSize = Math.Min(screenWidth, screenHeight);
       int tileSize = boardSize / 8;
 
-      int startX = (screenWidth - boardSize);
-      int startY = (screenHeight - boardSize);
+      int startX = screenWidth - boardSize;
+      int startY = screenHeight - boardSize;
 
       bool isWhite = true;
       for (int y = 0; y < 8; y++)
@@ -199,17 +199,21 @@ namespace ChessGame.Models
         ChangeSelectedPiece(capturedPiece);
         return;
       }
-
-      if (_legalMoves.Contains(newTile) && _selectedPiece.HomeTile != newTile)
+      // if move is legal
+      if (_legalMoves.Contains(newTile))
       {
+        // if there is enemy piece remove it from board
         if (capturedPiece != null)
         {
           _chessPieces.Remove(capturedPiece);
         }
+
+        // move piece to new tile
         _selectedPiece.MoveTo(newTile);
 
         UpdatePlayerTurnAndCheckStatus();
 
+        // clear highlighted tiles and selected piece
         HighlightTiles(_legalMoves, false);
         _selectedPiece.IsSelected = false;
         _selectedPiece = null;
@@ -228,13 +232,15 @@ namespace ChessGame.Models
     {
       PlayerTurn = PlayerTurn == Player.Black ? Player.White : Player.Black;
       IsInCheck = false;
-
+      // get the legal moves for the piece after it was moved
       foreach (var tile in _selectedPiece.GetLegalSafeMoves(_chessBoard, _chessPieces))
       {
         var tilePiece = GetPieceAtTile(tile);
+        // check if one of the legal moves put the enemies king in check
         if (tilePiece != null && tilePiece.PieceColor == PlayerTurn && tilePiece.Type == "king")
         {
           IsInCheck = true;
+          // check if that check is also a mate 
           IsMate();
           break;
         }
@@ -243,11 +249,14 @@ namespace ChessGame.Models
 
     private void IsMate()
     {
-      foreach (var piece in _chessPieces)
+      // had to use a for loop here because it kept throwing an error when using foreach about enumeration while collection
+      // is being modified this took an hour to fix fucking kill me
+      for (int i = 0; i < _chessPieces.Count; i++)
       {
-        if (piece.PieceColor == PlayerTurn)
+        if (_chessPieces[i].PieceColor == PlayerTurn)
         {
-          var legalMoves = piece.GetLegalSafeMoves(_chessBoard, _chessPieces);
+          // check if there is any legal move that can save the king 
+          var legalMoves = _chessPieces[i].GetLegalSafeMoves(_chessBoard, _chessPieces);
           if (legalMoves.Count != 0)
           {
             return;
