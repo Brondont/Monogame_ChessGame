@@ -29,7 +29,7 @@ namespace ChessGame.Models
       var pieceTile = testPiece.HomeTile;
       foreach (var piece in chessPieces)
       {
-        if (piece.PieceColor != testPiece.PieceColor && piece.Type != "king")
+        if (piece.PieceColor != testPiece.PieceColor)
         {
           var moves = piece.GetLegalMoves(chessBoard, chessPieces);
           if (moves.Contains(pieceTile))
@@ -99,20 +99,28 @@ namespace ChessGame.Models
 
     private void AddCaptureMoves(List<ChessTile> validMoves, int direction, int currentIndex, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
     {
-      // -1 and + 1 to check the front left and front right 
       int leftCaptureIndex = currentIndex + direction * 8 - 1;
       int rightCaptureIndex = currentIndex + direction * 8 + 1;
-      // check if enemy piece exists on the left side
-      if (IsValidCapture(leftCaptureIndex, chessBoard, chessPieces))
+
+      // Check if left capture is within the same row
+      if (leftCaptureIndex >= 0 && leftCaptureIndex / 8 == (currentIndex / 8) + direction)
       {
-        validMoves.Add(chessBoard[leftCaptureIndex]);
+        if (IsValidCapture(leftCaptureIndex, chessBoard, chessPieces))
+        {
+          validMoves.Add(chessBoard[leftCaptureIndex]);
+        }
       }
-      // check if enemy piece exists on the right side 
-      if (IsValidCapture(rightCaptureIndex, chessBoard, chessPieces))
+
+      // Check if right capture is within the same row
+      if (rightCaptureIndex < chessBoard.Count && rightCaptureIndex / 8 == (currentIndex / 8) + direction)
       {
-        validMoves.Add(chessBoard[rightCaptureIndex]);
+        if (IsValidCapture(rightCaptureIndex, chessBoard, chessPieces))
+        {
+          validMoves.Add(chessBoard[rightCaptureIndex]);
+        }
       }
     }
+
 
     private static bool IsTileFree(int index, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
     {

@@ -91,6 +91,7 @@ namespace ChessGame.Models
       // Handle special case for castling
       ChessPiece rook = null;
       ChessTile rookOriginalTile = null;
+      // if the piece is king and the king isnt in check and the move is one of the castles movess
       if (this.Type == "king" && Math.Abs(chessBoard.IndexOf(targetTile) - chessBoard.IndexOf(originalTile)) == 2)
       {
         int kingIndex = chessBoard.IndexOf(king.HomeTile);
@@ -119,16 +120,6 @@ namespace ChessGame.Models
 
       // Check if the king is in check
       bool isInCheck = ChessUtils.IsPieceUnderAttack(king, chessBoard, chessPieces);
-
-      // if castling check if rook is under attack after the move
-      bool isRookUnderAttack = false;
-      if (rook != null)
-      {
-        isRookUnderAttack = ChessUtils.IsPieceUnderAttack(rook, chessBoard, chessPieces);
-        rook.HomeTile = rookOriginalTile;
-      }
-
-
       // Revert the move
       this.HomeTile = originalTile;
 
@@ -136,8 +127,19 @@ namespace ChessGame.Models
       {
         chessPieces.Add(capturedPiece);
       }
+      // if castling check if rook is under attack after the move
+      bool castlsePossible = false;
+      if (rook != null)
+      {
+        // rook isnt under attack after the move and the king isnt currently in check
+        castlsePossible = ChessUtils.IsPieceUnderAttack(rook, chessBoard, chessPieces) && ChessUtils.IsPieceUnderAttack(rook, chessBoard, chessPieces);
+        rook.HomeTile = rookOriginalTile;
+      }
 
-      return !isInCheck && !isRookUnderAttack;
+
+
+
+      return !isInCheck && !castlsePossible;
     }
   }
 }
