@@ -24,15 +24,15 @@ namespace ChessGame.Models
     }
 
 
-    public static bool IsKingInCheck(Player playerColor, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+    public static bool IsPieceUnderAttack(ChessPiece testPiece, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
     {
-      var kingTile = chessPieces.Find(p => p.PieceColor == playerColor && p.Type == "king").HomeTile;
+      var pieceTile = testPiece.HomeTile;
       foreach (var piece in chessPieces)
       {
-        if (piece.PieceColor != playerColor && piece.Type != "king")
+        if (piece.PieceColor != testPiece.PieceColor && piece.Type != "king")
         {
           var moves = piece.GetLegalMoves(chessBoard, chessPieces);
-          if (moves.Contains(kingTile))
+          if (moves.Contains(pieceTile))
           {
             return true;
           }

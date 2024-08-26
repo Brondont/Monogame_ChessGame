@@ -160,19 +160,16 @@ namespace ChessGame.Models
 
     private void SelectPiece(Vector2 mousePosition)
     {
-      foreach (var piece in _chessPieces)
-      {
-        if (piece.HomeTile.Bounds.Contains(mousePosition) && piece.PieceColor == PlayerTurn)
-        {
-          _selectedPiece = piece;
-          piece.IsSelected = true;
+      ChessTile selectedTile = GetTileAtPosition(mousePosition);
+      ChessPiece piece = GetPieceAtTile(selectedTile);
+      if (piece == null || piece.PieceColor != PlayerTurn)
+        return;
+      _selectedPiece = piece;
+      _selectedPiece.IsSelected = true;
 
-          _legalMoves = _selectedPiece.GetLegalSafeMoves(_chessBoard, _chessPieces);
+      _legalMoves = _selectedPiece.GetLegalSafeMoves(_chessBoard, _chessPieces);
 
-          HighlightTiles(_legalMoves, true);
-          break;
-        }
-      }
+      HighlightTiles(_legalMoves, true);
     }
 
     private void ChangeSelectedPiece(ChessPiece capturedPiece)
@@ -202,18 +199,37 @@ namespace ChessGame.Models
       // if move is legal
       if (_legalMoves.Contains(newTile))
       {
-        // if there is enemy piece remove it from board
+        int newTileIndex = _chessBoard.IndexOf(newTile);
+        int selectedPieceIndex = _chessBoard.IndexOf(_selectedPiece.HomeTile);
+
+        // Check if the selected piece is a king and if the move is a castling move
+        if (_selectedPiece.Type == "king" && Math.Abs(newTileIndex - selectedPieceIndex) == 2)
+        {
+          ChessPiece rook;
+
+          if (newTileIndex < selectedPieceIndex)
+          {
+            // Queenside castling
+            rook = GetPieceAtTile(_chessBoard[selectedPieceIndex - 4]);
+            rook.MoveTo(_chessBoard[selectedPieceIndex - 1]);
+          }
+          else
+          {
+            // Kingside castling
+            rook = GetPieceAtTile(_chessBoard[selectedPieceIndex + 3]);
+            rook.MoveTo(_chessBoard[selectedPieceIndex + 1]);
+          }
+        }
+        // Standard move, handle potential capture and move the piece
         if (capturedPiece != null)
         {
           _chessPieces.Remove(capturedPiece);
         }
-
-        // move piece to new tile
         _selectedPiece.MoveTo(newTile);
 
         UpdatePlayerTurnAndCheckStatus();
 
-        // clear highlighted tiles and selected piece
+        // Clear highlighted tiles and reset the selected piece
         HighlightTiles(_legalMoves, false);
         _selectedPiece.IsSelected = false;
         _selectedPiece = null;

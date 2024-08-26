@@ -1,7 +1,9 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ChessGame.Models
 {
@@ -82,6 +84,32 @@ namespace ChessGame.Models
       ChessTile originalTile = this.HomeTile;
       ChessPiece capturedPiece = ChessUtils.GetPieceAtTile(targetTile, chessPieces);
 
+
+
+      ChessPiece king = chessPieces.FirstOrDefault(p => p.Type == "king" && p.PieceColor == this.PieceColor);
+
+      // Handle special case for castling
+      ChessPiece rook = null;
+      ChessTile rookOriginalTile = null;
+      if (this.Type == "king" && Math.Abs(chessBoard.IndexOf(targetTile) - chessBoard.IndexOf(originalTile)) == 2)
+      {
+        int kingIndex = chessBoard.IndexOf(king.HomeTile);
+        if (chessBoard.IndexOf(targetTile) < kingIndex)
+        {
+          // Queenside castling
+          rook = ChessUtils.GetPieceAtTile(chessBoard[kingIndex - 4], chessPieces);
+          rookOriginalTile = rook.HomeTile;
+          rook.HomeTile = chessBoard[kingIndex - 1];
+        }
+        else
+        {
+          // Kingside castling
+          rook = ChessUtils.GetPieceAtTile(chessBoard[kingIndex + 3], chessPieces);
+          rookOriginalTile = rook.HomeTile;
+          rook.HomeTile = chessBoard[kingIndex + 1];
+        }
+      }
+
       // Simulate the move
       this.HomeTile = targetTile;
       if (capturedPiece != null)
@@ -90,16 +118,26 @@ namespace ChessGame.Models
       }
 
       // Check if the king is in check
-      bool isInCheck = ChessUtils.IsKingInCheck(this.PieceColor, chessBoard, chessPieces);
+      bool isInCheck = ChessUtils.IsPieceUnderAttack(king, chessBoard, chessPieces);
+
+      // if castling check if rook is under attack after the move
+      bool isRookUnderAttack = false;
+      if (rook != null)
+      {
+        isRookUnderAttack = ChessUtils.IsPieceUnderAttack(rook, chessBoard, chessPieces);
+        rook.HomeTile = rookOriginalTile;
+      }
+
 
       // Revert the move
       this.HomeTile = originalTile;
+
       if (capturedPiece != null)
       {
         chessPieces.Add(capturedPiece);
       }
 
-      return !isInCheck;
+      return !isInCheck && !isRookUnderAttack;
     }
   }
 }
