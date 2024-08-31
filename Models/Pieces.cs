@@ -65,7 +65,7 @@ namespace ChessGame.Models
 
       // Move two tiles forward if at starting position
       // if the pawns are starting position 
-      if (!HasMoved)
+      if (LastMovedTurn == 0)
       {
         int doubleForwardIndex = currentIndex + direction * 16;
         // check if both tiles infront of the pawn are free 
@@ -76,6 +76,7 @@ namespace ChessGame.Models
           validMoves.Add(chessBoard[doubleForwardIndex]);
         }
       }
+
       // Capture moves
       int leftCaptureIndex = currentIndex + direction * 8 - 1;
       int rightCaptureIndex = currentIndex + direction * 8 + 1;
@@ -102,17 +103,16 @@ namespace ChessGame.Models
       foreach (var captureOffset in captureOffsets)
       {
         int adjacentIndex = currentIndex + captureOffset;
-        // TODO: en passant can only happen immediately after moving the pawn, not after any other moves
-        // TODO: make en passant capture the pawn
         // TODO: possible bug fixes with wrapping not sure ?
 
         // Get the adjacent piece
         var enPassantPawn = ChessUtils.GetPieceAtTile(chessBoard[adjacentIndex], chessPieces);
 
-        // Check if there is a pawn of the opposite color adjacent to this pawn
+        // check if move was this turn
         if (enPassantPawn != null &&
             enPassantPawn.Type == "pawn" &&
-            enPassantPawn.PieceColor != this.PieceColor)
+            enPassantPawn.PieceColor != this.PieceColor &&
+            enPassantPawn.LastMovedTurn == Globals.TurnCount)
         {
           // Calculate the difference between the current tile and the previous tile
           if (Math.Abs(chessBoard.IndexOf(enPassantPawn.HomeTile) - chessBoard.IndexOf(enPassantPawn.LastTile)) == 16)
@@ -340,7 +340,7 @@ namespace ChessGame.Models
       }
 
       // Add castling moves if eligible
-      if (!HasMoved)
+      if (LastMovedTurn == 0)
       {
         AddCastlingMoves(validMoves, chessBoard, chessPieces);
       }
@@ -362,7 +362,7 @@ namespace ChessGame.Models
     private void AddCastlingMoves(List<ChessTile> validMoves, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
     {
       int currentIndex = chessBoard.IndexOf(HomeTile);
-      var rooks = chessPieces.FindAll(p => p.Type == "rook" && p.PieceColor == PieceColor && !p.HasMoved);
+      var rooks = chessPieces.FindAll(p => p.Type == "rook" && p.PieceColor == PieceColor && p.LastMovedTurn == 0);
 
       ChessPiece qRook = null;
       ChessPiece kRook = null;

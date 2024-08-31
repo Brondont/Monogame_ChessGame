@@ -15,6 +15,11 @@ namespace ChessGame.Models
     None,
   }
 
+public static class Globals
+{
+  public static int TurnCount = 0;
+}
+
   public class Board
   {
     private List<ChessTile> _chessBoard;
@@ -24,6 +29,7 @@ namespace ChessGame.Models
     private List<ChessTile> _legalMoves;
     private MouseState _currentMouse;
     private MouseState _prevMouse;
+
 
     public string GameResult;
     public Player PlayerTurn { get; private set; } = Player.White;

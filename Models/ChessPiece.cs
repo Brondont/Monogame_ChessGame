@@ -14,13 +14,13 @@ namespace ChessGame.Models
     public ChessTile HomeTile { get; set; }
     public ChessTile LastTile { get; set; }
     public bool IsSelected { get; set; }
-    public bool HasMoved;
+    public int LastMovedTurn { get; set; }
     private Texture2D _texture;
 
     protected ChessPiece(string type, Player color, ChessTile homeTile)
     {
-      HasMoved = false;
       Type = type;
+      LastMovedTurn = 0;
       PieceColor = color;
       HomeTile = homeTile;
       _texture = null;
@@ -56,8 +56,8 @@ namespace ChessGame.Models
 
     public void MoveTo(ChessTile newTile)
     {
-      HasMoved = true;
       LastTile = HomeTile;
+      LastMovedTurn = ++Globals.TurnCount;
       HomeTile = newTile;
     }
 
