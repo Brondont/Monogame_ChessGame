@@ -57,36 +57,17 @@ namespace ChessGame.Models
       if (currentIndex == -1) return validMoves;
 
       // Move one tile forward
-      AddForwardMove(validMoves, direction, currentIndex, chessBoard, chessPieces);
-
-      // Move two tiles forward if at starting position
-      AddDoubleForwardMove(validMoves, direction, currentIndex, chessBoard, chessPieces);
-
-      // Capture moves
-      AddCaptureMoves(validMoves, direction, currentIndex, chessBoard, chessPieces);
-
-      // TODO: Implement en passant capture
-
-      return validMoves;
-    }
-
-    private static void AddForwardMove(List<ChessTile> validMoves, int direction, int currentIndex, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
-    {
-      // multiplying by 8 moves the row down by one 
       int forwardIndex = currentIndex + direction * 8;
       if (ChessUtils.IsTileInBounds(forwardIndex, chessBoard.Count) && IsTileFree(forwardIndex, chessBoard, chessPieces))
       {
         validMoves.Add(chessBoard[forwardIndex]);
       }
-    }
 
-    private void AddDoubleForwardMove(List<ChessTile> validMoves, int direction, int currentIndex, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
-    {
+      // Move two tiles forward if at starting position
       // if the pawns are starting position 
       if (!HasMoved)
       {
         int doubleForwardIndex = currentIndex + direction * 16;
-        int forwardIndex = currentIndex + direction * 8;
         // check if both tiles infront of the pawn are free 
         if (ChessUtils.IsTileInBounds(doubleForwardIndex, chessBoard.Count) &&
             IsTileFree(doubleForwardIndex, chessBoard, chessPieces) &&
@@ -95,10 +76,7 @@ namespace ChessGame.Models
           validMoves.Add(chessBoard[doubleForwardIndex]);
         }
       }
-    }
-
-    private void AddCaptureMoves(List<ChessTile> validMoves, int direction, int currentIndex, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
-    {
+      // Capture moves
       int leftCaptureIndex = currentIndex + direction * 8 - 1;
       int rightCaptureIndex = currentIndex + direction * 8 + 1;
 
@@ -119,6 +97,34 @@ namespace ChessGame.Models
           validMoves.Add(chessBoard[rightCaptureIndex]);
         }
       }
+      // En passant
+      int[] captureOffsets = { -1, 1 };
+      foreach (var captureOffset in captureOffsets)
+      {
+        int adjacentIndex = currentIndex + captureOffset;
+        // TODO: en passant can only happen immediately after moving the pawn, not after any other moves
+        // TODO: make en passant capture the pawn
+        // TODO: possible bug fixes with wrapping not sure ?
+
+        // Get the adjacent piece
+        var enPassantPawn = ChessUtils.GetPieceAtTile(chessBoard[adjacentIndex], chessPieces);
+
+        // Check if there is a pawn of the opposite color adjacent to this pawn
+        if (enPassantPawn != null &&
+            enPassantPawn.Type == "pawn" &&
+            enPassantPawn.PieceColor != this.PieceColor)
+        {
+          // Calculate the difference between the current tile and the previous tile
+          if (Math.Abs(chessBoard.IndexOf(enPassantPawn.HomeTile) - chessBoard.IndexOf(enPassantPawn.LastTile)) == 16)
+          {
+            int captureIndex = adjacentIndex + direction * 8;
+            validMoves.Add(chessBoard[captureIndex]);
+          }
+
+        }
+      }
+
+      return validMoves;
     }
 
 

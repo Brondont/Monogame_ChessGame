@@ -12,6 +12,7 @@ namespace ChessGame.Models
     public string Type { get; set; }
     public Player PieceColor { get; set; }
     public ChessTile HomeTile { get; set; }
+    public ChessTile LastTile { get; set; }
     public bool IsSelected { get; set; }
     public bool HasMoved;
     private Texture2D _texture;
@@ -56,6 +57,7 @@ namespace ChessGame.Models
     public void MoveTo(ChessTile newTile)
     {
       HasMoved = true;
+      LastTile = HomeTile;
       HomeTile = newTile;
     }
 
@@ -83,7 +85,6 @@ namespace ChessGame.Models
       // Save the current state
       ChessTile originalTile = this.HomeTile;
       ChessPiece capturedPiece = ChessUtils.GetPieceAtTile(targetTile, chessPieces);
-
 
 
       ChessPiece king = chessPieces.FirstOrDefault(p => p.Type == "king" && p.PieceColor == this.PieceColor);

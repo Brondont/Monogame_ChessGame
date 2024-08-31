@@ -221,12 +221,25 @@ namespace ChessGame.Models
           }
         }
         // Standard move, handle potential capture and move the piece
+        _selectedPiece.MoveTo(newTile);
+        selectedPieceIndex = _chessBoard.IndexOf(_selectedPiece.HomeTile);
+
         if (capturedPiece != null)
         {
           _chessPieces.Remove(capturedPiece);
+        } else {
+           // check if it was an en passant and if the move was a capture move
+          // its a capture move if a pawn exists behind the moved pawn
+          if(_selectedPiece.Type == "pawn") {
+             // check if theres a pawn behind to see if its a capture move
+             int offset = _selectedPiece.PieceColor == Player.White ? -8 : 8;
+             capturedPiece = GetPieceAtTile(_chessBoard[selectedPieceIndex - offset]);
+             // if we find a piece it will 100% be the en passant pawn so we capture it 
+             if(capturedPiece != null){
+               _chessPieces.Remove(capturedPiece);
+             }
+          }
         }
-        _selectedPiece.MoveTo(newTile);
-
         UpdatePlayerTurnAndCheckStatus();
 
         // Clear highlighted tiles and reset the selected piece
