@@ -18,6 +18,7 @@ namespace ChessGame.Models
 public static class Globals
 {
   public static int TurnCount = 0;
+  public static int MoveRule50 = 0;
 }
 
   public class Board
@@ -207,25 +208,21 @@ public static class Globals
       {
         int newTileIndex = _chessBoard.IndexOf(newTile);
         int selectedPieceIndex = _chessBoard.IndexOf(_selectedPiece.HomeTile);
+        // 50 move rule increment
+        Globals.MoveRule50++;
 
         // Check if the selected piece is a king and if the move is a castling move
         if (_selectedPiece.Type == "king" && Math.Abs(newTileIndex - selectedPieceIndex) == 2)
         {
-          ChessPiece rook;
+          ChessPiece rook = newTileIndex < selectedPieceIndex
+         ? GetPieceAtTile(_chessBoard[selectedPieceIndex - 4]) // Queenside
+         : GetPieceAtTile(_chessBoard[selectedPieceIndex + 3]); // Kingside
 
-          if (newTileIndex < selectedPieceIndex)
-          {
-            // Queenside castling
-            rook = GetPieceAtTile(_chessBoard[selectedPieceIndex - 4]);
-            rook.MoveTo(_chessBoard[selectedPieceIndex - 1]);
-          }
-          else
-          {
-            // Kingside castling
-            rook = GetPieceAtTile(_chessBoard[selectedPieceIndex + 3]);
-            rook.MoveTo(_chessBoard[selectedPieceIndex + 1]);
-          }
+         rook.MoveTo(_chessBoard[selectedPieceIndex + (newTileIndex < selectedPieceIndex ? 1 : -1)]);
+        } else if (_selectedPiece.Type == "pawn") {
+          Globals.TurnCount = 0;
         }
+
         // Standard move, handle potential capture and move the piece
         _selectedPiece.MoveTo(newTile);
         selectedPieceIndex = _chessBoard.IndexOf(_selectedPiece.HomeTile);
@@ -233,17 +230,19 @@ public static class Globals
         if (capturedPiece != null)
         {
           _chessPieces.Remove(capturedPiece);
+          Globals.MoveRule50 = 0; // reset counter 
         } else {
            // check if it was an en passant and if the move was a capture move
           // its a capture move if a pawn exists behind the moved pawn
           if(_selectedPiece.Type == "pawn") {
-             // check if theres a pawn behind to see if its a capture move
-             int offset = _selectedPiece.PieceColor == Player.White ? -8 : 8;
-             capturedPiece = GetPieceAtTile(_chessBoard[selectedPieceIndex - offset]);
-             // if we find a piece it will 100% be the en passant pawn so we capture it 
-             if(capturedPiece != null){
-               _chessPieces.Remove(capturedPiece);
-             }
+            // check if theres a pawn behind to see if its a capture move
+            int offset = _selectedPiece.PieceColor == Player.White ? -8 : 8;
+            capturedPiece = GetPieceAtTile(_chessBoard[selectedPieceIndex - offset]);
+            // if we find a piece it will 100% be the en passant pawn so we capture it 
+            if(capturedPiece != null) {
+              _chessPieces.Remove(capturedPiece);
+            }
+            Globals.MoveRule50 = 0;
           }
         }
         UpdatePlayerTurnAndCheckStatus();
@@ -278,6 +277,11 @@ public static class Globals
           // check if that check is also a mate 
           IsMate();
           break;
+        }
+        // check 50 rule move 
+        if (Globals.MoveRule50 == 50){
+          GameResult = "Draw by 50 move rule!";
+          PlayerTurn = Player.None;
         }
       }
     }
