@@ -278,11 +278,29 @@ public static class Globals
           IsMate();
           break;
         }
-        // check 50 rule move 
-        if (Globals.MoveRule50 == 50){
-          GameResult = "Draw by 50 move rule!";
-          PlayerTurn = Player.None;
-        }
+      }
+        // check draw 
+
+      bool draw = true;
+
+      foreach (var piece in _chessPieces)
+      {
+        if (piece.PieceColor == PlayerTurn && piece.GetLegalSafeMoves(_chessBoard, _chessPieces).Count > 0) {
+          draw = false;
+          break; // Exit early since a legal move exists
+          }
+      }
+
+      // Set the game result based on whether a draw condition was met
+      if (draw)
+      {
+        GameResult = "Draw!";
+        PlayerTurn = Player.None;
+      }
+      // check 50 rule move 
+      if (Globals.MoveRule50 == 50) {
+        GameResult = "Draw by 50 move rule!";
+        PlayerTurn = Player.None;
       }
     }
 
