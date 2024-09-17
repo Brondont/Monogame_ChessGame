@@ -346,9 +346,9 @@ namespace ChessGame.Models
 
             bool draw = true;
 
-            foreach (var piece in _chessPieces)
+            for (int i = 0; i < _chessPieces.Count; i++)
             {
-                if (piece.PieceColor == PlayerTurn && piece.GetLegalSafeMoves(_chessBoard, _chessPieces).Count > 0)
+                if (_chessPieces[i].PieceColor == PlayerTurn && _chessPieces[i].GetLegalSafeMoves(_chessBoard, _chessPieces).Count > 0)
                 {
                     draw = false;
                     break; // Exit early since a legal move exists

@@ -22,18 +22,15 @@ namespace ChessGame.State
 
             // Create buttons
             var button1 = new Button("1v1", font, startPosition, buttonSize);
-            var button2 = new Button("1v Stockfish", font, startPosition + new Vector2(0, 60), buttonSize);
-            var button3 = new Button("1v Personal Engine", font, startPosition + new Vector2(0, 120), buttonSize);
+            var button2 = new Button("1v Personal Engine", font, startPosition + new Vector2(0, 120), buttonSize);
 
             // Add buttons to the list
             buttons.Add(button1);
             buttons.Add(button2);
-            buttons.Add(button3);
 
             // Subscribe to button click events
             button1.Click += OnButtonClick;
             button2.Click += OnButtonClick;
-            button3.Click += OnButtonClick;
         }
 
         private void OnButtonClick(object sender, EventArgs e)

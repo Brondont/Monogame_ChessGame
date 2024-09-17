@@ -101,9 +101,6 @@ namespace ChessGame
                     _board = new Board(_font); // 1v1 game
                     break;
                 case 1:
-                    _board = new Board(_font); // 1v Stockfish game
-                    break;
-                case 2:
                     _board = new Board(_font); // 1v Personal Engine game
                     break;
             }
