@@ -102,24 +102,27 @@ namespace ChessGame.Models
             foreach (var captureOffset in captureOffsets)
             {
                 int adjacentIndex = currentIndex + captureOffset;
-                // TODO: mmm yes there is an issue with pawn wrapping
-
-                // Get the adjacent piece
-                var enPassantPawn = ChessUtils.GetPieceAtTile(chessBoard[adjacentIndex], chessPieces);
-
-                // check if move was this turn
-                if (enPassantPawn != null &&
-                    enPassantPawn.Type == "pawn" &&
-                    enPassantPawn.PieceColor != this.PieceColor &&
-                    enPassantPawn.LastMovedTurn == Globals.TurnCount)
+                // check adjacnet index is within bounds and within the same row
+                if (adjacentIndex >= 0 && adjacentIndex < 64 &&
+                         currentIndex / 8 == adjacentIndex / 8)
                 {
-                    // Calculate the difference between the current tile and the previous tile
-                    if (Math.Abs(chessBoard.IndexOf(enPassantPawn.HomeTile) - chessBoard.IndexOf(enPassantPawn.LastTile)) == 16)
-                    {
-                        int captureIndex = adjacentIndex + direction * 8;
-                        validMoves.Add(chessBoard[captureIndex]);
-                    }
+                    // Get the adjacent piece
+                    var enPassantPawn = ChessUtils.GetPieceAtTile(chessBoard[adjacentIndex], chessPieces);
 
+                    // check if move was this turn
+                    if (enPassantPawn != null &&
+                        enPassantPawn.Type == "pawn" &&
+                        enPassantPawn.PieceColor != this.PieceColor &&
+                        enPassantPawn.LastMovedTurn == Globals.TurnCount)
+                    {
+                        // Calculate the difference between the current tile and the previous tile
+                        if (Math.Abs(chessBoard.IndexOf(enPassantPawn.HomeTile) - chessBoard.IndexOf(enPassantPawn.LastTile)) == 16)
+                        {
+                            int captureIndex = adjacentIndex + direction * 8;
+                            validMoves.Add(chessBoard[captureIndex]);
+                        }
+
+                    }
                 }
             }
 

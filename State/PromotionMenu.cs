@@ -2,8 +2,8 @@ using ChessGame.UI;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
+using ChessGame.Models;
 using System;
-
 
 namespace ChessGame.State
 {
@@ -11,22 +11,24 @@ namespace ChessGame.State
     {
         private List<Button> buttons;
         private int selectedIndex;
+        public ChessPiece _pieceToPromote;
         private SpriteFont font;
         private Vector2 position;
         private Vector2 buttonSize;
         private Rectangle menuBounds;
-        private bool isVisible;
 
-        public PromotionMenu(SpriteFont font, int tileSize, Vector2 screenSize)
+        public PromotionMenu(ChessPiece pieceToPromote, SpriteFont font, int tileSize, Vector2 pos, int screenHeight)
         {
+            _pieceToPromote = pieceToPromote;
             this.font = font;
-            this.buttonSize = new Vector2(tileSize); // Button size same as chess tile
-            this.position = new Vector2((screenSize.X - buttonSize.X) / 2, (screenSize.Y - buttonSize.Y * 4) / 2); // Centering menu
+            this.buttonSize = new Vector2(tileSize);
             buttons = new List<Button>();
-            selectedIndex = 0;
-            isVisible = false;
+            selectedIndex = -1;
 
+            // Adjust the position to ensure the menu stays within the screen
+            AdjustPosition(pos, screenHeight, tileSize);
 
+            // Create buttons for promotion options
             string[] pieceTypes = { "Queen", "Rook", "Bishop", "Knight" };
             for (int i = 0; i < pieceTypes.Length; i++)
             {
@@ -36,15 +38,18 @@ namespace ChessGame.State
                 buttons.Add(button);
             }
 
-            // Define the bounds of the menu based on button size and count
             menuBounds = new Rectangle(position.ToPoint(), new Point((int)buttonSize.X, (int)buttonSize.Y * buttons.Count));
         }
 
+        private void AdjustPosition(Vector2 pos, int screenHeight, int tileSize)
+        {
+            int menuHeight = tileSize * 4;
+            float difference = pos.Y + menuHeight - screenHeight;
+            position = difference > 0 ? new Vector2(pos.X, pos.Y - difference) : pos;
+        }
 
         public void Update(GameTime gameTime)
         {
-            if (!isVisible) return;
-
             foreach (var button in buttons)
             {
                 button.Update(gameTime);
@@ -64,14 +69,14 @@ namespace ChessGame.State
             var button = sender as Button;
             if (button != null)
             {
+                selectedIndex = buttons.IndexOf(button);
             }
         }
 
-        private void HandlePromotion(string pieceType)
+        public int GetSelectedIndex()
         {
-            // Implement the promotion logic based on the selected piece type
-            // For example, you might trigger a promotion event or update the game state here
-            Console.WriteLine($"Promoted to: {pieceType}");
+            return selectedIndex;
         }
+
     }
 }

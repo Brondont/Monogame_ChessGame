@@ -136,10 +136,6 @@ namespace ChessGame.Models
                 castlsePossible = ChessUtils.IsPieceUnderAttack(rook, chessBoard, chessPieces) && ChessUtils.IsPieceUnderAttack(rook, chessBoard, chessPieces);
                 rook.HomeTile = rookOriginalTile;
             }
-
-
-
-
             return !isInCheck && !castlsePossible;
         }
     }

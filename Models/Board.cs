@@ -23,6 +23,8 @@ namespace ChessGame.Models
 
     public class Board
     {
+        // TODO: problem with game crashing when you push the middle pawn and do a capture leading to a check
+
         private List<ChessTile> _chessBoard;
         private List<ChessPiece> _chessPieces;
         private SpriteFont _font;
@@ -31,11 +33,16 @@ namespace ChessGame.Models
         private MouseState _currentMouse;
         private MouseState _prevMouse;
         private PromotionMenu _pawnPromotionMenu;
+        private ContentManager _content;
+        private GraphicsDevice _graphicsDevice;
 
 
         public string GameResult;
         public Player PlayerTurn { get; private set; } = Player.White;
         public bool IsInCheck { get; private set; } = false;
+        public int _ScreenHeight;
+        public int _ScreenWidth;
+        public int _TileSize;
 
         public Board(SpriteFont font)
         {
@@ -50,13 +57,13 @@ namespace ChessGame.Models
         private void InitializeChessBoard()
         {
             _chessBoard.Clear();
-            int screenWidth = 800; // Default width
-            int screenHeight = 800; // Default height
-            int boardSize = Math.Min(screenWidth, screenHeight);
-            int tileSize = boardSize / 8;
+            _ScreenHeight = 800;
+            _ScreenWidth = 800;
+            int boardSize = Math.Min(_ScreenHeight, _ScreenWidth);
+            _TileSize = boardSize / 8;
 
-            int startX = screenWidth - boardSize;
-            int startY = screenHeight - boardSize;
+            int startX = _ScreenWidth - boardSize;
+            int startY = _ScreenHeight - boardSize;
 
             bool isWhite = true;
             for (int y = 0; y < 8; y++)
@@ -64,9 +71,9 @@ namespace ChessGame.Models
                 for (int x = 0; x < 8; x++)
                 {
                     string tileCoordinate = $"{(char)('a' + x)}{8 - y}";
-                    var position = new Vector2(startX + x * tileSize, startY + y * tileSize);
+                    var position = new Vector2(startX + x * _TileSize, startY + y * _TileSize);
                     var color = isWhite ? Color.White : Color.Gray;
-                    _chessBoard.Add(new ChessTile(position, color, tileSize, tileCoordinate, _font));
+                    _chessBoard.Add(new ChessTile(position, color, _TileSize, tileCoordinate, _font));
                     isWhite = !isWhite;
                 }
                 isWhite = !isWhite;
@@ -133,6 +140,8 @@ namespace ChessGame.Models
 
         public void LoadContent(GraphicsDevice graphicsDevice, ContentManager content)
         {
+          _graphicsDevice = graphicsDevice;
+          _content = content;
             // Load all tile textures
             foreach (var tile in _chessBoard)
             {
@@ -153,6 +162,22 @@ namespace ChessGame.Models
 
             var mousePosition = new Vector2(_currentMouse.X, _currentMouse.Y);
 
+            // update the pawn promotion menu instead if it exists
+            if (_pawnPromotionMenu != null)
+            {
+                _pawnPromotionMenu.Update(gameTime);
+                // check if player selected a promotion
+                int promotionIndex = _pawnPromotionMenu.GetSelectedIndex();
+                if (promotionIndex >= 0)
+                {
+                    PromoteSelectedPiece(promotionIndex);
+                    // remove the menu after the promotion is completed and the piece is moved 
+                    _pawnPromotionMenu = null;
+                }
+                // dont detect board clicks if we are updating the promotion menu so we return early
+                return;
+            }
+
             if (_prevMouse.LeftButton == ButtonState.Released && _currentMouse.LeftButton == ButtonState.Pressed)
             {
                 if (_selectedPiece == null)
@@ -164,6 +189,31 @@ namespace ChessGame.Models
                     MoveSelectedPiece(mousePosition);
                 }
             }
+        }
+
+        private void PromoteSelectedPiece(int promotionIndex)
+        {
+            ChessPiece pieceToPromote = _pawnPromotionMenu._pieceToPromote;
+
+            ChessPiece promotedPiece = promotionIndex switch
+            {
+                0 => new Queen(pieceToPromote.PieceColor, pieceToPromote.HomeTile),
+                1 => new Rook(pieceToPromote.PieceColor, pieceToPromote.HomeTile),
+                2 => new Bishop(pieceToPromote.PieceColor, pieceToPromote.HomeTile),
+                3 => new Knight(pieceToPromote.PieceColor, pieceToPromote.HomeTile),
+                _ => null
+            };
+
+            if (promotedPiece == null)
+            {
+                Console.WriteLine("Error: Invalid promotion selection");
+                return;
+            }
+
+            // Replace the old pawn with the promoted piece
+            _chessPieces.Remove(pieceToPromote);
+            _chessPieces.Add(promotedPiece);
+            promotedPiece.LoadContent(_graphicsDevice, _content);
         }
 
         private void SelectPiece(Vector2 mousePosition)
@@ -198,7 +248,8 @@ namespace ChessGame.Models
             if (newTile == null) return;
 
             var capturedPiece = GetPieceAtTile(newTile);
-            // if the tile clicked is of the same color as the player select it instead
+
+            // if the piece clicked is of the same color as the player select it instead
             if (capturedPiece != null && capturedPiece.PieceColor == _selectedPiece.PieceColor)
             {
                 ChangeSelectedPiece(capturedPiece);
@@ -224,23 +275,21 @@ namespace ChessGame.Models
                 }
                 else if (_selectedPiece.Type == "pawn")
                 {
+                    Globals.MoveRule50 = 0;
                     if (newTileIndex > 55 || newTileIndex < 8)
                     {
                         // create paw promotion menu
-                        _pawnPromotionMenu = new PromotionMenu(_font, 100, newTile.Position);
-                        return;
+                        _pawnPromotionMenu = new PromotionMenu(_selectedPiece, _font, 100, newTile.Position, _ScreenHeight);
                     }
-                    Globals.TurnCount = 0;
                 }
-
                 // Standard move, handle potential capture and move the piece
                 _selectedPiece.MoveTo(newTile);
                 selectedPieceIndex = _chessBoard.IndexOf(_selectedPiece.HomeTile);
 
                 if (capturedPiece != null)
                 {
-                    _chessPieces.Remove(capturedPiece);
                     Globals.MoveRule50 = 0; // reset counter 
+                    _chessPieces.Remove(capturedPiece);
                 }
                 else
                 {
