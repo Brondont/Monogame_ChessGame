@@ -1,9 +1,10 @@
 using ChessGame.UI;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using ChessGame.Models;
-using System;
 
 namespace ChessGame.State
 {
@@ -16,6 +17,9 @@ namespace ChessGame.State
         private Vector2 position;
         private Vector2 buttonSize;
         private Rectangle menuBounds;
+        private List<Texture2D> textures;
+
+        private string[] pieceTypes = { "queen", "rook", "bishop", "knight" };
 
         public PromotionMenu(ChessPiece pieceToPromote, SpriteFont font, int tileSize, Vector2 pos, int screenHeight)
         {
@@ -29,11 +33,10 @@ namespace ChessGame.State
             AdjustPosition(pos, screenHeight, tileSize);
 
             // Create buttons for promotion options
-            string[] pieceTypes = { "Queen", "Rook", "Bishop", "Knight" };
             for (int i = 0; i < pieceTypes.Length; i++)
             {
                 Vector2 buttonPosition = position + new Vector2(0, i * buttonSize.Y);
-                var button = new Button(pieceTypes[i], font, buttonPosition, buttonSize);
+                var button = new Button("", font, buttonPosition, buttonSize);
                 button.Click += OnButtonClick;
                 buttons.Add(button);
             }
@@ -48,6 +51,16 @@ namespace ChessGame.State
             position = difference > 0 ? new Vector2(pos.X, pos.Y - difference) : pos;
         }
 
+        public void LoadContent(ContentManager content)
+        {
+            textures = new List<Texture2D>(pieceTypes.Length); // Initialize textures list
+            for (int i = 0; i < pieceTypes.Length; i++)
+            {
+                string texturePath = "pieces/" + $"{_pieceToPromote.PieceColor}-{pieceTypes[i]}";// Adjust path format if needed
+                textures.Add(content.Load<Texture2D>(texturePath));
+            }
+        }
+
         public void Update(GameTime gameTime)
         {
             foreach (var button in buttons)
@@ -58,9 +71,15 @@ namespace ChessGame.State
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            foreach (var button in buttons)
+            for (int i = 0; i < buttons.Count; i++)
             {
-                button.Draw(spriteBatch);
+                buttons[i].Draw(spriteBatch);
+                // Draw the texture for the button at the button's location
+                if (i < textures.Count)
+                {
+                    Vector2 buttonPosition = position + new Vector2(0, i * buttonSize.Y);
+                    spriteBatch.Draw(textures[i], new Rectangle(buttonPosition.ToPoint(), buttonSize.ToPoint()), Color.White);
+                }
             }
         }
 

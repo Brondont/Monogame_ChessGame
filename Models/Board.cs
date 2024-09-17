@@ -280,6 +280,7 @@ namespace ChessGame.Models
                     {
                         // create paw promotion menu
                         _pawnPromotionMenu = new PromotionMenu(_selectedPiece, _font, 100, newTile.Position, _ScreenHeight);
+                        _pawnPromotionMenu.LoadContent(_content);
                     }
                 }
                 // Standard move, handle potential capture and move the piece
