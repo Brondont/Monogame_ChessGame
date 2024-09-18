@@ -98,10 +98,16 @@ namespace ChessGame
             switch (_menu.GetSelectedIndex())
             {
                 case 0:
-                    _board = new Board(_font); // 1v1 game
+                    _board = new Board(_font, GameMode.PlayerVsPlayer); 
                     break;
                 case 1:
-                    _board = new Board(_font); // 1v Personal Engine game
+                    _board = new Board(_font, GameMode.PlayerVsRandomMoves);
+                    break;
+                case 2:
+                    _board = new Board(_font, GameMode.PlayerVsCaptureOnlyMoves);
+                    break;
+                case 3:
+                    _board = new Board(_font, GameMode.RandomMovesVsCaptureOnlyMoves);
                     break;
             }
             _board?.LoadContent(GraphicsDevice, Content);

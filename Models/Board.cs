@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using ChessGame.State;
+using ChessGame.AI;
 
 namespace ChessGame.Models
 {
@@ -13,6 +14,14 @@ namespace ChessGame.Models
         Black,
         White,
         None,
+    }
+
+    public enum GameMode
+    {
+        PlayerVsPlayer,
+        PlayerVsRandomMoves,
+        PlayerVsCaptureOnlyMoves,
+        RandomMovesVsCaptureOnlyMoves,
     }
 
     public static class Globals
@@ -27,6 +36,7 @@ namespace ChessGame.Models
 
         private List<ChessTile> _chessBoard;
         private List<ChessPiece> _chessPieces;
+        private ChessEngine _engine;
         private SpriteFont _font;
         private ChessPiece _selectedPiece;
         private List<ChessTile> _legalMoves;
@@ -35,6 +45,7 @@ namespace ChessGame.Models
         private PromotionMenu _pawnPromotionMenu;
         private ContentManager _content;
         private GraphicsDevice _graphicsDevice;
+        private GameMode _gameMode;
 
 
         public string GameResult;
@@ -44,11 +55,18 @@ namespace ChessGame.Models
         public int _ScreenWidth;
         public int _TileSize;
 
-        public Board(SpriteFont font)
+        public Board(SpriteFont font, GameMode gameMode)
         {
             _chessBoard = new List<ChessTile>();
             _chessPieces = new List<ChessPiece>();
             _font = font;
+
+            // 0 is the only index for player vs player
+            if (gameMode != 0)
+            {
+                _engine = new ChessEngine(Player.Black);
+                _gameMode = gameMode;
+            }
 
             InitializeChessBoard();
             InitializeChessPieces();
@@ -140,8 +158,8 @@ namespace ChessGame.Models
 
         public void LoadContent(GraphicsDevice graphicsDevice, ContentManager content)
         {
-          _graphicsDevice = graphicsDevice;
-          _content = content;
+            _graphicsDevice = graphicsDevice;
+            _content = content;
             // Load all tile textures
             foreach (var tile in _chessBoard)
             {
@@ -157,11 +175,43 @@ namespace ChessGame.Models
 
         public void Update(GameTime gameTime)
         {
+            switch (_gameMode)
+            {
+                case GameMode.PlayerVsPlayer:
+                    PlayerMove(gameTime);
+                    break;
+                case GameMode.PlayerVsRandomMoves:
+                    if (_engine != null && PlayerTurn == Player.Black)
+                    {
+                        // excute an engine move 
+                        _engine.MakeRandomMove(_chessBoard, _chessPieces);
+                        UpdatePlayerTurnAndCheckStatus();
+                    }
+                    else
+                        PlayerMove(gameTime);
+                    break;
+                case GameMode.PlayerVsCaptureOnlyMoves:
+                    if (_engine != null && PlayerTurn == Player.Black)
+                    {
+                        // excute an engine move 
+                        _engine.MakeCaptureOnlyMove(_chessBoard, _chessPieces);
+                        UpdatePlayerTurnAndCheckStatus();
+                    }
+                    else
+                        PlayerMove(gameTime);
+                    break;
+            }
+        }
+
+        private void PlayerMove(GameTime gameTime)
+        {
             _prevMouse = _currentMouse;
             _currentMouse = Mouse.GetState();
 
             var mousePosition = new Vector2(_currentMouse.X, _currentMouse.Y);
 
+
+            // execure player move 
             // update the pawn promotion menu instead if it exists
             if (_pawnPromotionMenu != null)
             {
@@ -189,6 +239,7 @@ namespace ChessGame.Models
                     MoveSelectedPiece(mousePosition);
                 }
             }
+
         }
 
         private void PromoteSelectedPiece(int promotionIndex)
@@ -271,7 +322,7 @@ namespace ChessGame.Models
                    ? GetPieceAtTile(_chessBoard[selectedPieceIndex - 4]) // Queenside
                    : GetPieceAtTile(_chessBoard[selectedPieceIndex + 3]); // Kingside
 
-                    rook.MoveTo(_chessBoard[newTileIndex + (newTileIndex < selectedPieceIndex ? 1 : -1)]);
+                    rook.MoveTo(_chessBoard[newTileIndex + (newTileIndex < selectedPieceIndex ? 1 : -1)], _chessBoard, _chessPieces);
                 }
                 else if (_selectedPiece.Type == "pawn")
                 {
@@ -283,31 +334,9 @@ namespace ChessGame.Models
                         _pawnPromotionMenu.LoadContent(_content);
                     }
                 }
-                // Standard move, handle potential capture and move the piece
-                _selectedPiece.MoveTo(newTile);
-                selectedPieceIndex = _chessBoard.IndexOf(_selectedPiece.HomeTile);
 
-                if (capturedPiece != null)
-                {
-                    Globals.MoveRule50 = 0; // reset counter 
-                    _chessPieces.Remove(capturedPiece);
-                }
-                else
-                {
-                    // check if it was an en passant and if the move was a capture move
-                    // its a capture move if a pawn exists behind the moved pawn
-                    if (_selectedPiece.Type == "pawn")
-                    {
-                        // check if theres a pawn behind to see if its a capture move
-                        int offset = _selectedPiece.PieceColor == Player.White ? -8 : 8;
-                        capturedPiece = GetPieceAtTile(_chessBoard[selectedPieceIndex - offset]);
-                        // if we find a piece it will 100% be the en passant pawn so we capture it 
-                        if (capturedPiece != null)
-                        {
-                            _chessPieces.Remove(capturedPiece);
-                        }
-                    }
-                }
+                _selectedPiece.MoveTo(newTile, _chessBoard, _chessPieces);
+
                 UpdatePlayerTurnAndCheckStatus();
 
                 // Clear highlighted tiles and reset the selected piece
@@ -329,18 +358,11 @@ namespace ChessGame.Models
         {
             PlayerTurn = PlayerTurn == Player.Black ? Player.White : Player.Black;
             IsInCheck = false;
-            // get the legal moves for the piece after it was moved
-            foreach (var tile in _selectedPiece.GetLegalSafeMoves(_chessBoard, _chessPieces))
+
+            // check if that check is also a mate 
+            if (IsMate())
             {
-                var tilePiece = GetPieceAtTile(tile);
-                // check if one of the legal moves put the enemies king in check
-                if (tilePiece != null && tilePiece.PieceColor == PlayerTurn && tilePiece.Type == "king")
-                {
-                    IsInCheck = true;
-                    // check if that check is also a mate 
-                    IsMate();
-                    break;
-                }
+                return;
             }
             // check draw 
 
@@ -369,7 +391,8 @@ namespace ChessGame.Models
             }
         }
 
-        private void IsMate()
+
+        private bool IsMate()
         {
             // had to use a for loop here because it kept throwing an error when using foreach about enumeration while collection
             // is being modified this took an hour to fix fucking kill me
@@ -381,13 +404,14 @@ namespace ChessGame.Models
                     var legalMoves = _chessPieces[i].GetLegalSafeMoves(_chessBoard, _chessPieces);
                     if (legalMoves.Count != 0)
                     {
-                        return;
+                        return false;
                     }
                 }
             }
             // if it went over all the pieces and there is no legal move left for player its checkmate 
             GameResult = PlayerTurn == Player.Black ? "White won!" : "Black Won !";
             PlayerTurn = Player.None;
+            return true;
         }
 
         public void Draw(SpriteBatch spriteBatch)

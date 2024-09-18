@@ -54,12 +54,39 @@ namespace ChessGame.Models
             }
         }
 
-        public void MoveTo(ChessTile newTile)
+        public void MoveTo(ChessTile newTile, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
+
+            // check if piece exists in destination
+            ChessPiece capturedPiece = ChessUtils.GetPieceAtTile(newTile, chessPieces);
+
+            // move piece 
             LastTile = HomeTile;
             LastMovedTurn = ++Globals.TurnCount;
             HomeTile = newTile;
-        }
+ 
+            // capture the piece at destination if exists
+            if (capturedPiece != null)
+            {
+                Globals.MoveRule50 = 0;
+                chessPieces.Remove(capturedPiece);
+            }
+            else
+            {
+                // handle special capture case of en passant
+                if (this.Type == "pawn")
+                {
+                    // check if theres a pawn behind to see if its a capture move
+                    int offset = this.PieceColor == Player.White ? -8 : 8;
+                    capturedPiece = ChessUtils.GetPieceAtTile(chessBoard[chessBoard.IndexOf(newTile) - offset], chessPieces);
+                    // if we find a piece it will 100% be the en passant pawn so we capture it 
+                    if (capturedPiece != null)
+                    {
+                        chessPieces.Remove(capturedPiece);
+                    }
+                }
+            }
+       }
 
         public abstract List<ChessTile> GetLegalMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces);
 
