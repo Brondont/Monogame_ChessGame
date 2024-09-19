@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using ChessGame.State;
 using ChessGame.AI;
+using System.Linq;
 
 namespace ChessGame.Models
 {
@@ -34,9 +35,10 @@ namespace ChessGame.Models
     {
         // TODO: problem with game crashing when you push the middle pawn and do a capture leading to a check
 
-        private List<ChessTile> _chessBoard;
-        private List<ChessPiece> _chessPieces;
+        private List<ChessTile> _chessBoard = new();
+        private List<ChessPiece> _chessPieces = new();
         private ChessEngine _engine;
+        private ChessEngine _engine2;
         private SpriteFont _font;
         private ChessPiece _selectedPiece;
         private List<ChessTile> _legalMoves;
@@ -57,16 +59,8 @@ namespace ChessGame.Models
 
         public Board(SpriteFont font, GameMode gameMode)
         {
-            _chessBoard = new List<ChessTile>();
-            _chessPieces = new List<ChessPiece>();
             _font = font;
-
-            // 0 is the only index for player vs player
-            if (gameMode != 0)
-            {
-                _engine = new ChessEngine(Player.Black);
-                _gameMode = gameMode;
-            }
+            _gameMode = gameMode;
 
             InitializeChessBoard();
             InitializeChessPieces();
@@ -171,6 +165,16 @@ namespace ChessGame.Models
             {
                 piece.LoadContent(graphicsDevice, content);
             }
+
+            if (_gameMode != GameMode.PlayerVsPlayer)
+            {
+                _engine = new ChessEngine(Player.Black, _graphicsDevice, _content);
+                if (_gameMode == GameMode.RandomMovesVsCaptureOnlyMoves)
+                    _engine2 = new ChessEngine(Player.White, _graphicsDevice, _content);
+
+            }
+
+
         }
 
         public void Update(GameTime gameTime)
@@ -199,6 +203,18 @@ namespace ChessGame.Models
                     }
                     else
                         PlayerMove(gameTime);
+                    break;
+                case GameMode.RandomMovesVsCaptureOnlyMoves:
+                    if (PlayerTurn == _engine.Color)
+                    {
+                        _engine.MakeRandomMove(_chessBoard, _chessPieces);
+                    }
+                    else
+                    {
+                        _engine2.MakeCaptureOnlyMove(_chessBoard, _chessPieces);
+
+                    }
+                    UpdatePlayerTurnAndCheckStatus();
                     break;
             }
         }
@@ -312,9 +328,6 @@ namespace ChessGame.Models
             {
                 int newTileIndex = _chessBoard.IndexOf(newTile);
                 int selectedPieceIndex = _chessBoard.IndexOf(_selectedPiece.HomeTile);
-                // 50 move rule increment
-                Globals.MoveRule50++;
-
                 // Check if the selected piece is a king and if the move is a castling move
                 if (_selectedPiece.Type == "king" && Math.Abs(newTileIndex - selectedPieceIndex) == 2)
                 {
@@ -326,7 +339,6 @@ namespace ChessGame.Models
                 }
                 else if (_selectedPiece.Type == "pawn")
                 {
-                    Globals.MoveRule50 = 0;
                     if (newTileIndex > 55 || newTileIndex < 8)
                     {
                         // create paw promotion menu
@@ -356,51 +368,47 @@ namespace ChessGame.Models
 
         private void UpdatePlayerTurnAndCheckStatus()
         {
-            PlayerTurn = PlayerTurn == Player.Black ? Player.White : Player.Black;
-            IsInCheck = false;
 
-            // check if that check is also a mate 
-            if (IsMate())
-            {
-                return;
-            }
-            // check draw 
-
-            bool draw = true;
-
-            for (int i = 0; i < _chessPieces.Count; i++)
-            {
-                if (_chessPieces[i].PieceColor == PlayerTurn && _chessPieces[i].GetLegalSafeMoves(_chessBoard, _chessPieces).Count > 0)
-                {
-                    draw = false;
-                    break; // Exit early since a legal move exists
-                }
-            }
-
+            if (IsCheck())
+                if (IsMate())
+                    return;
             // Set the game result based on whether a draw condition was met
-            if (draw)
-            {
-                GameResult = "Draw!";
-                PlayerTurn = Player.None;
-            }
+            if (IsDraw())
+                return;
             // check 50 rule move 
             if (Globals.MoveRule50 == 50)
             {
                 GameResult = "Draw by 50 move rule!";
                 PlayerTurn = Player.None;
+                return;
             }
+            PlayerTurn = PlayerTurn == Player.Black ? Player.White : Player.Black;
         }
 
+        private bool IsDraw()
+        {
+            for (int i = 0; i < _chessPieces.Count; i++)
+            {
+                ChessPiece piece = _chessPieces[i];
+                if (piece.PieceColor != PlayerTurn && piece.GetLegalSafeMoves(_chessBoard, _chessPieces).Count > 0)
+                {
+                    return false;
+                }
+            }
+
+            GameResult = "Draw!";
+            PlayerTurn = Player.None;
+            return true;
+        }
 
         private bool IsMate()
         {
-            // had to use a for loop here because it kept throwing an error when using foreach about enumeration while collection
-            // is being modified this took an hour to fix fucking kill me
+            // NOte have to use for loop because of enumeration error when using for each or ANY
+            // check if opponent has any legal moves under check
             for (int i = 0; i < _chessPieces.Count; i++)
             {
-                if (_chessPieces[i].PieceColor == PlayerTurn)
+                if (_chessPieces[i].PieceColor != PlayerTurn)
                 {
-                    // check if there is any legal move that can save the king 
                     var legalMoves = _chessPieces[i].GetLegalSafeMoves(_chessBoard, _chessPieces);
                     if (legalMoves.Count != 0)
                     {
@@ -408,10 +416,44 @@ namespace ChessGame.Models
                     }
                 }
             }
-            // if it went over all the pieces and there is no legal move left for player its checkmate 
-            GameResult = PlayerTurn == Player.Black ? "White won!" : "Black Won !";
+
+            GameResult = PlayerTurn + " won!";
             PlayerTurn = Player.None;
             return true;
+        }
+
+
+        private bool IsCheck()
+        {
+            ChessPiece king = null;
+
+            // Find the opponent's king
+            for (int i = 0; i < _chessPieces.Count; i++)
+            {
+                ChessPiece piece = _chessPieces[i];
+                if (piece.PieceColor != PlayerTurn && piece.Type == "king")
+                {
+                    king = piece;
+                    break;
+                }
+            }
+
+            // Check if any current player's piece is putting the king in check
+            for (int i = 0; i < _chessPieces.Count; i++)
+            {
+                ChessPiece piece = _chessPieces[i];
+                if (piece.PieceColor == PlayerTurn)
+                {
+                    var opponentMoves = piece.GetLegalMoves(_chessBoard, _chessPieces); // Get all legal moves of the piece
+
+                    if (opponentMoves.Contains(king.HomeTile))
+                    {
+                        return true; // The king is under attack
+                    }
+                }
+            }
+
+            return false;
         }
 
         public void Draw(SpriteBatch spriteBatch)

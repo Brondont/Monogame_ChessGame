@@ -143,6 +143,7 @@ namespace ChessGame
                     _board?.Draw(_spriteBatch);
                     break;
                 case GameState.EndOfGame:
+                    _board?.Draw(_spriteBatch);
                     _endMenu?.Draw(_spriteBatch);
                     break;
             }

@@ -56,7 +56,7 @@ namespace ChessGame.Models
 
         public void MoveTo(ChessTile newTile, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
-
+            Globals.MoveRule50++;
             // check if piece exists in destination
             ChessPiece capturedPiece = ChessUtils.GetPieceAtTile(newTile, chessPieces);
 
@@ -76,6 +76,7 @@ namespace ChessGame.Models
                 // handle special capture case of en passant
                 if (this.Type == "pawn")
                 {
+                    Globals.MoveRule50 = 0;
                     // check if theres a pawn behind to see if its a capture move
                     int offset = this.PieceColor == Player.White ? -8 : 8;
                     capturedPiece = ChessUtils.GetPieceAtTile(chessBoard[chessBoard.IndexOf(newTile) - offset], chessPieces);

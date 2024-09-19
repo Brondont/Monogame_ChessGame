@@ -335,7 +335,6 @@ namespace ChessGame.Models
                 {
                     var targetTile = chessBoard[newIndex];
                     var occupyingPiece = ChessUtils.GetPieceAtTile(targetTile, chessPieces);
-
                     if (occupyingPiece == null || occupyingPiece.PieceColor != this.PieceColor) // check if tile has no piece or the piece of is opposite color 
                         validMoves.Add(targetTile);
                 }

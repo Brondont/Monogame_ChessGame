@@ -48,7 +48,7 @@ namespace ChessGame.State
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            spriteBatch.DrawString(_font, _winMessage, _messagePosition, Color.White);
+            spriteBatch.DrawString(_font, _winMessage, _messagePosition, Color.Red);
 
 
             button.Draw(spriteBatch);
