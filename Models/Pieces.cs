@@ -3,56 +3,15 @@ using System.Collections.Generic;
 
 namespace ChessGame.Models
 {
-    public static class ChessUtils
+      public class Pawn : ChessPiece
     {
-        public static ChessPiece GetPieceAtTile(ChessTile tile, List<ChessPiece> chessPieces)
-        {
-            foreach (var piece in chessPieces)
-            {
-                if (piece.HomeTile == tile)
-                {
-                    return piece;
-                }
-            }
-            return null;
-        }
-
-        public static bool IsTileInBounds(int index, int boardSize)
-        {
-            return index >= 0 && index < boardSize;
-        }
-
-
-        public static bool IsPieceUnderAttack(ChessPiece testPiece, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
-        {
-            var pieceTile = testPiece.HomeTile;
-            foreach (var piece in chessPieces)
-            {
-                if (piece.PieceColor != testPiece.PieceColor)
-                {
-                    var moves = piece.GetLegalMoves(chessBoard, chessPieces);
-                    if (moves.Contains(pieceTile))
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-
-    }
-
-    public class Pawn : ChessPiece
-    {
-        public Pawn(Player color, ChessTile homeTile) : base("pawn", color, homeTile) { }
+        public Pawn(Player color, ChessTile homeTile) : base("pawn", color, homeTile, 1) { }
 
         public override List<ChessTile> GetLegalMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
             var validMoves = new List<ChessTile>();
             int direction = (PieceColor == Player.White) ? -1 : 1;
             int currentIndex = chessBoard.IndexOf(HomeTile);
-
             if (currentIndex == -1) return validMoves;
 
             // Move one tile forward
@@ -146,7 +105,7 @@ namespace ChessGame.Models
 
     public class Rook : ChessPiece
     {
-        public Rook(Player color, ChessTile homeTile) : base("rook", color, homeTile) { }
+        public Rook(Player color, ChessTile homeTile) : base("rook", color, homeTile, 5) { }
 
         public override List<ChessTile> GetLegalMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
@@ -201,7 +160,7 @@ namespace ChessGame.Models
 
     public class Knight : ChessPiece
     {
-        public Knight(Player color, ChessTile homeTile) : base("knight", color, homeTile) { }
+        public Knight(Player color, ChessTile homeTile) : base("knight", color, homeTile, 3) { }
 
         public override List<ChessTile> GetLegalMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
@@ -247,7 +206,7 @@ namespace ChessGame.Models
 
     public class Bishop : ChessPiece
     {
-        public Bishop(Player color, ChessTile homeTile) : base("bishop", color, homeTile) { }
+        public Bishop(Player color, ChessTile homeTile) : base("bishop", color, homeTile, 3) { }
 
         public override List<ChessTile> GetLegalMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
@@ -298,7 +257,7 @@ namespace ChessGame.Models
 
     public class Queen : ChessPiece
     {
-        public Queen(Player color, ChessTile homeTile) : base("queen", color, homeTile) { }
+        public Queen(Player color, ChessTile homeTile) : base("queen", color, homeTile, 8) { }
 
         public override List<ChessTile> GetLegalMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
@@ -314,7 +273,7 @@ namespace ChessGame.Models
 
     public class King : ChessPiece
     {
-        public King(Player color, ChessTile homeTile) : base("king", color, homeTile) { }
+        public King(Player color, ChessTile homeTile) : base("king", color, homeTile, 10000) { }
 
         public override List<ChessTile> GetLegalMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {

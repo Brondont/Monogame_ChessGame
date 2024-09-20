@@ -14,20 +14,32 @@ namespace ChessGame.AI
         private Random _random;
         private GraphicsDevice _graphicsDevice;
         private ContentManager _content;
+        private int _depth;
 
 
-        public ChessEngine(Player color, GraphicsDevice graphicsDevice, ContentManager content)
+        public ChessEngine(Player color, GraphicsDevice graphicsDevice, ContentManager content, int depth)
         {
             Color = color;
             _random = new Random();
             _graphicsDevice = graphicsDevice;
             _content = content;
+            _depth = depth;
+        }
+
+        private int EvaluateBoard(List<ChessPiece> chessPieces)
+        {
+            int score = 0;
+            foreach (var piece in chessPieces)
+            {
+                score += piece.PieceColor == Color ? piece.Value : -piece.Value;
+            }
+            return score;
         }
 
         private void CheckPawnPromotion(ChessPiece selectedPiece, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
             int selectedPieceIndex = chessBoard.IndexOf(selectedPiece.HomeTile);
-            if (selectedPiece.Type == "pawn" && (selectedPieceIndex > 55 || selectedPieceIndex < 8))
+            if (selectedPiece.Type == "pawn" && (selectedPieceIndex > 56 || selectedPieceIndex < 8))
             {
                 // for now we will just auto promote to queen
                 ChessPiece queen = new Queen(selectedPiece.PieceColor, selectedPiece.HomeTile);
@@ -44,16 +56,15 @@ namespace ChessGame.AI
 
 
             ChessPiece selectedPiece = null;
-            List<ChessTile> legalMoves = null;
+            List<ChessTile> legalMoves = new List<ChessTile>();
 
-            while (selectedPiece == null || legalMoves.Count == 0)
+            do
             {
                 // Select a random piece
                 selectedPiece = playerPieces[_random.Next(playerPieces.Count)];
-
                 // Get legal moves for the selected piece
                 legalMoves = selectedPiece.GetLegalSafeMoves(chessBoard, chessPieces);
-            }
+            } while(legalMoves.Count == 0);
 
             // Select a random legal move for the selected piece
             var targetTile = legalMoves[_random.Next(legalMoves.Count)];
@@ -86,7 +97,48 @@ namespace ChessGame.AI
 
             // if we get to here there is no capture move so we just make a random move
             MakeRandomMove(chessBoard, chessPieces);
-}
+        }
+
+        public void MakeMinMaxMove(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+        {
+            // Store the best move and piece
+            ChessPiece bestPiece = null;
+            ChessTile bestMove = null;
+
+            // Call the minimax function
+            int _ = MinMax(new List<ChessTile>(chessBoard), new List<ChessPiece>(chessPieces), _depth, true, out bestPiece, out bestMove);
+
+            // Execute the best move
+            if (bestPiece != null && bestMove != null)
+            {
+                bestPiece.MoveTo(bestMove, chessBoard, chessPieces);
+                CheckPawnPromotion(bestPiece, chessBoard, chessPieces);
+            }
+        }
+        private int MinMax(List<ChessTile> chessBoard, List<ChessPiece> chessPieces, int depth, bool isMaxing, out ChessPiece bestPiece, out ChessTile bestMove)
+        {
+            bestPiece = null;
+            bestMove = null;
+            int evaluation = 0;
+            Player currentTurn = isMaxing == true ? this.Color : (this.Color == Player.White ? Player.Black : Player.White);
+
+            if (depth == 0 || ChessUtils.IsGameOver(chessBoard, chessPieces, currentTurn, out _))
+            {
+                return EvaluateBoard(chessPieces); // Implement this to evaluate the board's state
+            }
+
+            // simulate each possible move 
+            foreach (ChessPiece piece in chessPieces)
+            {
+                List<ChessTile> legalMoves = piece.GetLegalMoves(chessBoard, chessPieces);
+                foreach (ChessTile legalMove in legalMoves)
+                {
+                    piece.MoveTo(legalMove, chessBoard, chessPieces);
+                    evaluation = MinMax(new List<ChessTile>(chessBoard), new List<ChessPiece>(chessPieces), depth - 1, false, out _, out _);
+                }
+            }
+            return 0;
+        }
     }
 }
 

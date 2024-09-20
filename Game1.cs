@@ -107,7 +107,13 @@ namespace ChessGame
                     _board = new Board(_font, GameMode.PlayerVsCaptureOnlyMoves);
                     break;
                 case 3:
+                    _board = new Board(_font, GameMode.PlayerVsMinMaxMovesV1);
+                    break;
+                case 4:
                     _board = new Board(_font, GameMode.RandomMovesVsCaptureOnlyMoves);
+                    break;
+                case 5:
+                    _board = new Board(_font, GameMode.CaptureOnlyMovesVsMinMaxMovesV1);
                     break;
             }
             _board?.LoadContent(GraphicsDevice, Content);

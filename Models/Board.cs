@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using ChessGame.State;
 using ChessGame.AI;
-using System.Linq;
 
 namespace ChessGame.Models
 {
@@ -22,7 +21,9 @@ namespace ChessGame.Models
         PlayerVsPlayer,
         PlayerVsRandomMoves,
         PlayerVsCaptureOnlyMoves,
+        PlayerVsMinMaxMovesV1,
         RandomMovesVsCaptureOnlyMoves,
+        CaptureOnlyMovesVsMinMaxMovesV1,
     }
 
     public static class Globals
@@ -39,6 +40,7 @@ namespace ChessGame.Models
         private List<ChessPiece> _chessPieces = new();
         private ChessEngine _engine;
         private ChessEngine _engine2;
+        private int _engineDepth;
         private SpriteFont _font;
         private ChessPiece _selectedPiece;
         private List<ChessTile> _legalMoves;
@@ -48,6 +50,7 @@ namespace ChessGame.Models
         private ContentManager _content;
         private GraphicsDevice _graphicsDevice;
         private GameMode _gameMode;
+
 
 
         public string GameResult;
@@ -61,6 +64,7 @@ namespace ChessGame.Models
         {
             _font = font;
             _gameMode = gameMode;
+            _engineDepth = 5;
 
             InitializeChessBoard();
             InitializeChessPieces();
@@ -168,9 +172,9 @@ namespace ChessGame.Models
 
             if (_gameMode != GameMode.PlayerVsPlayer)
             {
-                _engine = new ChessEngine(Player.Black, _graphicsDevice, _content);
-                if (_gameMode == GameMode.RandomMovesVsCaptureOnlyMoves)
-                    _engine2 = new ChessEngine(Player.White, _graphicsDevice, _content);
+                _engine = new ChessEngine(Player.Black, _graphicsDevice, _content, _engineDepth);
+                if (_gameMode == GameMode.RandomMovesVsCaptureOnlyMoves || _gameMode == GameMode.CaptureOnlyMovesVsMinMaxMovesV1)
+                    _engine2 = new ChessEngine(Player.White, _graphicsDevice, _content, _engineDepth);
 
             }
 
@@ -204,6 +208,16 @@ namespace ChessGame.Models
                     else
                         PlayerMove(gameTime);
                     break;
+                case GameMode.PlayerVsMinMaxMovesV1:
+                    if (_engine != null && PlayerTurn == Player.Black)
+                    {
+                        // excute an engine move 
+                        _engine.MakeMinMaxMove(_chessBoard, _chessPieces);
+                        UpdatePlayerTurnAndCheckStatus();
+                    }
+                    else
+                        PlayerMove(gameTime);
+                    break;
                 case GameMode.RandomMovesVsCaptureOnlyMoves:
                     if (PlayerTurn == _engine.Color)
                     {
@@ -216,8 +230,22 @@ namespace ChessGame.Models
                     }
                     UpdatePlayerTurnAndCheckStatus();
                     break;
+                case GameMode.CaptureOnlyMovesVsMinMaxMovesV1:
+                    if (PlayerTurn == _engine.Color)
+                    {
+                        _engine.MakeCaptureOnlyMove(_chessBoard, _chessPieces);
+                    }
+                    else
+                    {
+                        _engine2.MakeMinMaxMove(_chessBoard, _chessPieces);
+
+                    }
+                    UpdatePlayerTurnAndCheckStatus();
+                    break;
+
             }
         }
+
 
         private void PlayerMove(GameTime gameTime)
         {
@@ -368,92 +396,13 @@ namespace ChessGame.Models
 
         private void UpdatePlayerTurnAndCheckStatus()
         {
-
-            if (IsCheck())
-                if (IsMate())
-                    return;
-            // Set the game result based on whether a draw condition was met
-            if (IsDraw())
-                return;
-            // check 50 rule move 
-            if (Globals.MoveRule50 == 50)
+            if (ChessUtils.IsGameOver(_chessBoard, _chessPieces, PlayerTurn, out GameResult))
             {
-                GameResult = "Draw by 50 move rule!";
                 PlayerTurn = Player.None;
                 return;
             }
+
             PlayerTurn = PlayerTurn == Player.Black ? Player.White : Player.Black;
-        }
-
-        private bool IsDraw()
-        {
-            for (int i = 0; i < _chessPieces.Count; i++)
-            {
-                ChessPiece piece = _chessPieces[i];
-                if (piece.PieceColor != PlayerTurn && piece.GetLegalSafeMoves(_chessBoard, _chessPieces).Count > 0)
-                {
-                    return false;
-                }
-            }
-
-            GameResult = "Draw!";
-            PlayerTurn = Player.None;
-            return true;
-        }
-
-        private bool IsMate()
-        {
-            // NOte have to use for loop because of enumeration error when using for each or ANY
-            // check if opponent has any legal moves under check
-            for (int i = 0; i < _chessPieces.Count; i++)
-            {
-                if (_chessPieces[i].PieceColor != PlayerTurn)
-                {
-                    var legalMoves = _chessPieces[i].GetLegalSafeMoves(_chessBoard, _chessPieces);
-                    if (legalMoves.Count != 0)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            GameResult = PlayerTurn + " won!";
-            PlayerTurn = Player.None;
-            return true;
-        }
-
-
-        private bool IsCheck()
-        {
-            ChessPiece king = null;
-
-            // Find the opponent's king
-            for (int i = 0; i < _chessPieces.Count; i++)
-            {
-                ChessPiece piece = _chessPieces[i];
-                if (piece.PieceColor != PlayerTurn && piece.Type == "king")
-                {
-                    king = piece;
-                    break;
-                }
-            }
-
-            // Check if any current player's piece is putting the king in check
-            for (int i = 0; i < _chessPieces.Count; i++)
-            {
-                ChessPiece piece = _chessPieces[i];
-                if (piece.PieceColor == PlayerTurn)
-                {
-                    var opponentMoves = piece.GetLegalMoves(_chessBoard, _chessPieces); // Get all legal moves of the piece
-
-                    if (opponentMoves.Contains(king.HomeTile))
-                    {
-                        return true; // The king is under attack
-                    }
-                }
-            }
-
-            return false;
         }
 
         public void Draw(SpriteBatch spriteBatch)

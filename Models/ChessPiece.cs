@@ -15,9 +15,10 @@ namespace ChessGame.Models
         public ChessTile LastTile { get; set; }
         public bool IsSelected { get; set; }
         public int LastMovedTurn { get; set; }
+        public int Value;
         private Texture2D _texture;
 
-        protected ChessPiece(string type, Player color, ChessTile homeTile)
+        protected ChessPiece(string type, Player color, ChessTile homeTile, int pieceValue)
         {
             Type = type;
             LastMovedTurn = 0;
@@ -25,6 +26,7 @@ namespace ChessGame.Models
             HomeTile = homeTile;
             _texture = null;
             IsSelected = false;
+            Value = pieceValue;
         }
 
         public void LoadContent(GraphicsDevice graphicsDevice, ContentManager content)
