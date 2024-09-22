@@ -34,29 +34,16 @@ namespace ChessGame.Models
 
         public void Draw(SpriteBatch spriteBatch)
         {
-
-            if (_texture == null)
-            {
-                throw new InvalidOperationException("Texture is not initialized. Ensure LoadContent is called.");
-            }
-
-            if (_font == null)
-            {
-                throw new InvalidOperationException("Font is not initialized. Ensure LoadContent is called.");
-            }
-            var drawColor = IsHighlighted ? Color.Yellow : Color;
+            var drawColor = IsHighlighted ? Color.LightSkyBlue : Color;
 
             // Drawing the tile 
             spriteBatch.Draw(_texture, Bounds, drawColor);
 
-            // Draw tile coordinate 
+            //drawing coordinate
             var textSize = _font.MeasureString(TileCoordinate);
-            var textPosition = new Vector2(
-                    Bounds.X + (Bounds.Width - textSize.X - 5),
-                    Bounds.Y + (Bounds.Height - textSize.Y - 5)
-            );
+            var textPosition = new Vector2(Bounds.X + (Bounds.Width - textSize.X - 5), Bounds.Y + (Bounds.Height - textSize.Y - 5));
 
-            spriteBatch.DrawString(_font, TileCoordinate, textPosition, Color.DarkGray);
+            spriteBatch.DrawString(_font, TileCoordinate, textPosition, Color.Gray);
         }
     }
 }

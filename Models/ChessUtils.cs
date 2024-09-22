@@ -106,7 +106,7 @@ namespace ChessGame.Models
         public static bool IsStalemate(Player player, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
             // Get all pieces of the current player
-            var playerPieces = chessPieces.Where(p => p.PieceColor == player).ToList();
+            var playerPieces = chessPieces.Where(p => p.PieceColor != player).ToList();
 
             // Check if the king is in check
             var king = playerPieces.FirstOrDefault(p => p.Type == "king");

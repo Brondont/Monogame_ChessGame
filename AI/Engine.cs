@@ -7,7 +7,6 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace ChessGame.AI
 {
-
     public class ChessEngine
     {
         public Player Color;
@@ -29,9 +28,9 @@ namespace ChessGame.AI
         private int EvaluateBoard(List<ChessPiece> chessPieces)
         {
             int score = 0;
-            foreach (var piece in chessPieces)
+            for (int i = 0; i < chessPieces.Count; i++)
             {
-                score += piece.PieceColor == Color ? piece.Value : -piece.Value;
+                score += chessPieces[i].PieceColor == Color ? chessPieces[i].Value : -chessPieces[i].Value;
             }
             return score;
         }
@@ -54,17 +53,13 @@ namespace ChessGame.AI
         {
             var playerPieces = chessPieces.Where(p => p.PieceColor == Color).ToList();
 
-
-            ChessPiece selectedPiece = null;
-            List<ChessTile> legalMoves = new List<ChessTile>();
-
+            ChessPiece selectedPiece = null; List<ChessTile> legalMoves = new List<ChessTile>();
             do
-            {
-                // Select a random piece
+            { // Select a random piece
                 selectedPiece = playerPieces[_random.Next(playerPieces.Count)];
                 // Get legal moves for the selected piece
                 legalMoves = selectedPiece.GetLegalSafeMoves(chessBoard, chessPieces);
-            } while(legalMoves.Count == 0);
+            } while (legalMoves.Count == 0);
 
             // Select a random legal move for the selected piece
             var targetTile = legalMoves[_random.Next(legalMoves.Count)];
@@ -77,7 +72,6 @@ namespace ChessGame.AI
         {
             // get all pieces of the same color and randomize their order 
             var playerPieces = chessPieces.Where(p => p.PieceColor == Color).OrderBy(x => _random.Next()).ToList();
-
 
             foreach (ChessPiece selectedPiece in playerPieces)
             {
@@ -99,15 +93,15 @@ namespace ChessGame.AI
             MakeRandomMove(chessBoard, chessPieces);
         }
 
-        public void MakeMinMaxMove(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+        public void Barbie(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
             // Store the best move and piece
             ChessPiece bestPiece = null;
             ChessTile bestMove = null;
 
-            // Call the minimax function
-            int _ = MinMax(new List<ChessTile>(chessBoard), new List<ChessPiece>(chessPieces), _depth, true, out bestPiece, out bestMove);
 
+            // Call the minimax function
+            int _ = MinMax(chessBoard, chessPieces, _depth, true, out bestPiece, out bestMove);
             // Execute the best move
             if (bestPiece != null && bestMove != null)
             {
@@ -115,30 +109,61 @@ namespace ChessGame.AI
                 CheckPawnPromotion(bestPiece, chessBoard, chessPieces);
             }
         }
-        private int MinMax(List<ChessTile> chessBoard, List<ChessPiece> chessPieces, int depth, bool isMaxing, out ChessPiece bestPiece, out ChessTile bestMove)
+
+        public int MinMax(List<ChessTile> chessBoard, List<ChessPiece> chessPieces, int depth, bool isMaxing, out ChessPiece bestPiece, out ChessTile bestMove)
         {
             bestPiece = null;
             bestMove = null;
-            int evaluation = 0;
-            Player currentTurn = isMaxing == true ? this.Color : (this.Color == Player.White ? Player.Black : Player.White);
+
+            int evaluation = isMaxing ? int.MinValue : int.MaxValue;
+            Player currentTurn = isMaxing ? this.Color : (this.Color == Player.White ? Player.Black : Player.White);
+            var playerPieces = chessPieces.Where(p => p.PieceColor == currentTurn).OrderBy(x => _random.Next()).ToList();
+
+            // Base case: if we've reached the maximum depth or the game is over
 
             if (depth == 0 || ChessUtils.IsGameOver(chessBoard, chessPieces, currentTurn, out _))
             {
-                return EvaluateBoard(chessPieces); // Implement this to evaluate the board's state
+                return EvaluateBoard(chessPieces);
             }
-
-            // simulate each possible move 
-            foreach (ChessPiece piece in chessPieces)
+            // Iterate over each piece and simulate its moves
+            for (int i = 0; i < playerPieces.Count; i++)
             {
+                ChessPiece piece = playerPieces[i];
                 List<ChessTile> legalMoves = piece.GetLegalMoves(chessBoard, chessPieces);
                 foreach (ChessTile legalMove in legalMoves)
                 {
-                    piece.MoveTo(legalMove, chessBoard, chessPieces);
-                    evaluation = MinMax(new List<ChessTile>(chessBoard), new List<ChessPiece>(chessPieces), depth - 1, false, out _, out _);
+                    // Store the original state
+                    ChessTile originalTile = piece.HomeTile;
+                    ChessPiece capturedPiece = piece.MoveTo(legalMove, chessBoard, chessPieces);
+
+                    // Recursively call MinMax with the simulated board state
+                    int newEvaluation = MinMax(chessBoard, chessPieces, depth - 1, !isMaxing, out _, out _);
+
+                    // Update evaluation based on maximizing/minimizing
+                    if (isMaxing && newEvaluation > evaluation || !isMaxing && newEvaluation < evaluation)
+                    {
+                        evaluation = newEvaluation;
+                        bestPiece = piece;
+                        bestMove = legalMove;
+                    }
+
+                    // Revert the move (restore the original state)
+                    piece.MoveTo(originalTile, chessBoard, chessPieces);
+
+                    // If a piece was captured, restore it
+                    if (capturedPiece != null)
+                    {
+                        chessPieces.Add(capturedPiece);
+                        capturedPiece.LoadContent(_graphicsDevice, _content);
+                    }
                 }
             }
-            return 0;
+            return evaluation;
         }
+
+
     }
+
 }
+
 

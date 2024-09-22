@@ -64,7 +64,7 @@ namespace ChessGame.Models
         {
             _font = font;
             _gameMode = gameMode;
-            _engineDepth = 5;
+            _engineDepth = 3;
 
             InitializeChessBoard();
             InitializeChessPieces();
@@ -88,7 +88,7 @@ namespace ChessGame.Models
                 {
                     string tileCoordinate = $"{(char)('a' + x)}{8 - y}";
                     var position = new Vector2(startX + x * _TileSize, startY + y * _TileSize);
-                    var color = isWhite ? Color.White : Color.Gray;
+                    var color = isWhite ? Color.White: Color.Pink;
                     _chessBoard.Add(new ChessTile(position, color, _TileSize, tileCoordinate, _font));
                     isWhite = !isWhite;
                 }
@@ -212,13 +212,14 @@ namespace ChessGame.Models
                     if (_engine != null && PlayerTurn == Player.Black)
                     {
                         // excute an engine move 
-                        _engine.MakeMinMaxMove(_chessBoard, _chessPieces);
+                        _engine.Barbie(_chessBoard, _chessPieces);
                         UpdatePlayerTurnAndCheckStatus();
                     }
                     else
                         PlayerMove(gameTime);
                     break;
                 case GameMode.RandomMovesVsCaptureOnlyMoves:
+
                     if (PlayerTurn == _engine.Color)
                     {
                         _engine.MakeRandomMove(_chessBoard, _chessPieces);
@@ -237,7 +238,7 @@ namespace ChessGame.Models
                     }
                     else
                     {
-                        _engine2.MakeMinMaxMove(_chessBoard, _chessPieces);
+                        _engine2.Barbie(_chessBoard, _chessPieces);
 
                     }
                     UpdatePlayerTurnAndCheckStatus();

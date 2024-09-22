@@ -36,6 +36,7 @@ namespace ChessGame.Models
             _texture = content.Load<Texture2D>(texturePath);
         }
 
+
         public void Draw(SpriteBatch spriteBatch)
         {
             if (_texture != null && HomeTile != null)
@@ -56,7 +57,7 @@ namespace ChessGame.Models
             }
         }
 
-        public void MoveTo(ChessTile newTile, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+        public ChessPiece MoveTo(ChessTile newTile, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
             Globals.MoveRule50++;
             // check if piece exists in destination
@@ -66,7 +67,7 @@ namespace ChessGame.Models
             LastTile = HomeTile;
             LastMovedTurn = ++Globals.TurnCount;
             HomeTile = newTile;
- 
+
             // capture the piece at destination if exists
             if (capturedPiece != null)
             {
@@ -83,13 +84,14 @@ namespace ChessGame.Models
                     int offset = this.PieceColor == Player.White ? -8 : 8;
                     capturedPiece = ChessUtils.GetPieceAtTile(chessBoard[chessBoard.IndexOf(newTile) - offset], chessPieces);
                     // if we find a piece it will 100% be the en passant pawn so we capture it 
-                    if (capturedPiece != null)
+                    if (capturedPiece != null && capturedPiece.PieceColor != this.PieceColor)
                     {
                         chessPieces.Remove(capturedPiece);
                     }
                 }
             }
-       }
+            return capturedPiece;
+        }
 
         public abstract List<ChessTile> GetLegalMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces);
 
