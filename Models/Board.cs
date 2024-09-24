@@ -9,13 +9,6 @@ using ChessGame.AI;
 
 namespace ChessGame.Models
 {
-    public enum Player
-    {
-        Black,
-        White,
-        None,
-    }
-
     public enum GameMode
     {
         PlayerVsPlayer,
@@ -50,6 +43,8 @@ namespace ChessGame.Models
         private ContentManager _content;
         private GraphicsDevice _graphicsDevice;
         private GameMode _gameMode;
+        private double timeSinceLastUpdate = 0;
+        private double updateInterval = 500;
 
 
 
@@ -88,7 +83,7 @@ namespace ChessGame.Models
                 {
                     string tileCoordinate = $"{(char)('a' + x)}{8 - y}";
                     var position = new Vector2(startX + x * _TileSize, startY + y * _TileSize);
-                    var color = isWhite ? Color.White: Color.Pink;
+                    var color = isWhite ? Color.White : Color.Pink;
                     _chessBoard.Add(new ChessTile(position, color, _TileSize, tileCoordinate, _font));
                     isWhite = !isWhite;
                 }
@@ -173,16 +168,19 @@ namespace ChessGame.Models
             if (_gameMode != GameMode.PlayerVsPlayer)
             {
                 _engine = new ChessEngine(Player.Black, _graphicsDevice, _content, _engineDepth);
-                if (_gameMode == GameMode.RandomMovesVsCaptureOnlyMoves || _gameMode == GameMode.CaptureOnlyMovesVsMinMaxMovesV1)
-                    _engine2 = new ChessEngine(Player.White, _graphicsDevice, _content, _engineDepth);
 
             }
-
+            if (_gameMode == GameMode.RandomMovesVsCaptureOnlyMoves || _gameMode == GameMode.CaptureOnlyMovesVsMinMaxMovesV1)
+            {
+                _engine2 = new ChessEngine(Player.Black, _graphicsDevice, _content, _engineDepth);
+                _engine = new ChessEngine(Player.White, _graphicsDevice, _content, _engineDepth);
+            }
 
         }
 
         public void Update(GameTime gameTime)
         {
+            timeSinceLastUpdate += gameTime.ElapsedGameTime.TotalMilliseconds;
             switch (_gameMode)
             {
                 case GameMode.PlayerVsPlayer:
@@ -232,18 +230,22 @@ namespace ChessGame.Models
                     UpdatePlayerTurnAndCheckStatus();
                     break;
                 case GameMode.CaptureOnlyMovesVsMinMaxMovesV1:
-                    if (PlayerTurn == _engine.Color)
+                    if (timeSinceLastUpdate >= updateInterval)
                     {
-                        _engine.MakeCaptureOnlyMove(_chessBoard, _chessPieces);
-                    }
-                    else
-                    {
-                        _engine2.Barbie(_chessBoard, _chessPieces);
+                        // need to add a delay here as they are going at each other way too fast lmfao
+                        if (PlayerTurn == _engine.Color)
+                        {
+                            _engine.MakeCaptureOnlyMove(_chessBoard, _chessPieces);
+                        }
+                        else
+                        {
+                            _engine2.Barbie(_chessBoard, _chessPieces);
 
+                        }
+                        UpdatePlayerTurnAndCheckStatus();
+                        timeSinceLastUpdate = 0;
                     }
-                    UpdatePlayerTurnAndCheckStatus();
                     break;
-
             }
         }
 
@@ -368,6 +370,7 @@ namespace ChessGame.Models
                 }
                 else if (_selectedPiece.Type == "pawn")
                 {
+                    Globals.MoveRule50 = 0;
                     if (newTileIndex > 55 || newTileIndex < 8)
                     {
                         // create paw promotion menu
@@ -376,7 +379,9 @@ namespace ChessGame.Models
                     }
                 }
 
-                _selectedPiece.MoveTo(newTile, _chessBoard, _chessPieces);
+                capturedPiece = _selectedPiece.MoveTo(newTile, _chessBoard, _chessPieces);
+                if (capturedPiece != null)
+                    Globals.MoveRule50 = 0;
 
                 UpdatePlayerTurnAndCheckStatus();
 
@@ -397,13 +402,13 @@ namespace ChessGame.Models
 
         private void UpdatePlayerTurnAndCheckStatus()
         {
+            PlayerTurn = PlayerTurn == Player.Black ? Player.White : Player.Black;
             if (ChessUtils.IsGameOver(_chessBoard, _chessPieces, PlayerTurn, out GameResult))
             {
                 PlayerTurn = Player.None;
                 return;
             }
 
-            PlayerTurn = PlayerTurn == Player.Black ? Player.White : Player.Black;
         }
 
         public void Draw(SpriteBatch spriteBatch)

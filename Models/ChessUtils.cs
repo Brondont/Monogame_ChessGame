@@ -46,7 +46,7 @@ namespace ChessGame.Models
             Message = null;
             if (IsCheckmate(currentPlayer, chessBoard, chessPieces))
             {
-                Message = currentPlayer + " won!";
+                Message = PlayerUtils.Opponent(currentPlayer)+ " won!";
                 return true;
             }
 
@@ -81,8 +81,8 @@ namespace ChessGame.Models
         // Check if the current player is in checkmate
         public static bool IsCheckmate(Player player, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
-            // Get all pieces of the opponent player
-            var playerPieces = chessPieces.Where(p => p.PieceColor != player).ToList();
+            // Get all pieces of the attacked player
+            var playerPieces = chessPieces.Where(p => p.PieceColor == player).ToList();
 
             // Check if any piece has a legal move
             foreach (var piece in playerPieces)
@@ -94,10 +94,6 @@ namespace ChessGame.Models
                 }
             }
 
-            // If no legal moves and the king is in check, it's checkmate
-            // in essense the is checkmate looks for any legal moves on the king side 
-            // and is king in heck looks for any legal moves on the opponent that attack the king 
-            // combining them results in knowing if its a checkmate king being attcked + has no legal moves so mate
             var king = playerPieces.FirstOrDefault(p => p.Type == "king");
             return king != null && IsKingInCheck(king, chessBoard, chessPieces);
         }
@@ -106,7 +102,7 @@ namespace ChessGame.Models
         public static bool IsStalemate(Player player, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
             // Get all pieces of the current player
-            var playerPieces = chessPieces.Where(p => p.PieceColor != player).ToList();
+            var playerPieces = chessPieces.Where(p => p.PieceColor == player).ToList();
 
             // Check if the king is in check
             var king = playerPieces.FirstOrDefault(p => p.Type == "king");

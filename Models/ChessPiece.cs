@@ -57,6 +57,12 @@ namespace ChessGame.Models
             }
         }
 
+        public void UndoMove(ChessTile oldTile, ChessTile oldLastTile, int oldLastMovedTurn) {
+          HomeTile = oldTile;
+          LastTile = oldLastTile;
+          LastMovedTurn = oldLastMovedTurn; 
+        }
+
         public ChessPiece MoveTo(ChessTile newTile, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
             Globals.MoveRule50++;
@@ -71,21 +77,22 @@ namespace ChessGame.Models
             // capture the piece at destination if exists
             if (capturedPiece != null)
             {
-                Globals.MoveRule50 = 0;
                 chessPieces.Remove(capturedPiece);
+                Console.WriteLine($"Capture happened to {capturedPiece.PieceColor} {capturedPiece.Type} by {this.PieceColor} {this.Type}");
             }
             else
             {
                 // handle special capture case of en passant
                 if (this.Type == "pawn")
                 {
-                    Globals.MoveRule50 = 0;
                     // check if theres a pawn behind to see if its a capture move
+                    // PS: this logic breaks when you are reverting moves with the engine thus we need a differnet function that just undoes a move
                     int offset = this.PieceColor == Player.White ? -8 : 8;
                     capturedPiece = ChessUtils.GetPieceAtTile(chessBoard[chessBoard.IndexOf(newTile) - offset], chessPieces);
                     // if we find a piece it will 100% be the en passant pawn so we capture it 
-                    if (capturedPiece != null && capturedPiece.PieceColor != this.PieceColor)
+                    if (capturedPiece != null)
                     {
+                        Console.WriteLine($"En passant capture happened to: {capturedPiece.PieceColor} {capturedPiece.Type} by {this.PieceColor} {this.Type}");
                         chessPieces.Remove(capturedPiece);
                     }
                 }

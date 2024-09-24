@@ -105,6 +105,7 @@ namespace ChessGame.AI
             // Execute the best move
             if (bestPiece != null && bestMove != null)
             {
+                Console.WriteLine($"Best move is: {bestPiece.PieceColor} {bestPiece.Type} to {bestMove.TileCoordinate}");
                 bestPiece.MoveTo(bestMove, chessBoard, chessPieces);
                 CheckPawnPromotion(bestPiece, chessBoard, chessPieces);
             }
@@ -129,13 +130,16 @@ namespace ChessGame.AI
             for (int i = 0; i < playerPieces.Count; i++)
             {
                 ChessPiece piece = playerPieces[i];
-                List<ChessTile> legalMoves = piece.GetLegalMoves(chessBoard, chessPieces);
+                List<ChessTile> legalMoves = piece.GetLegalSafeMoves(chessBoard, chessPieces);
+                Console.WriteLine($"Trying move: {piece.PieceColor} {piece.Type} to");
                 foreach (ChessTile legalMove in legalMoves)
                 {
                     // Store the original state
                     ChessTile originalTile = piece.HomeTile;
+                    ChessTile originalLastTile = piece.LastTile;
+                    int originalLastTurn = piece.LastMovedTurn;
+                    Console.WriteLine($"{legalMove.TileCoordinate}");
                     ChessPiece capturedPiece = piece.MoveTo(legalMove, chessBoard, chessPieces);
-
                     // Recursively call MinMax with the simulated board state
                     int newEvaluation = MinMax(chessBoard, chessPieces, depth - 1, !isMaxing, out _, out _);
 
@@ -148,7 +152,7 @@ namespace ChessGame.AI
                     }
 
                     // Revert the move (restore the original state)
-                    piece.MoveTo(originalTile, chessBoard, chessPieces);
+                    piece.UndoMove(originalTile, originalLastTile, originalLastTurn);  
 
                     // If a piece was captured, restore it
                     if (capturedPiece != null)
