@@ -17,7 +17,7 @@ namespace ChessGame.UI
         private bool isHovered;
         private MouseState _currentMouse;
         private MouseState _prevMouse;
-        private const float SelectionDelay = 0.5f;
+        private const float SelectionDelay = 0.1f;
         private float _selectionTimer = 0f;
         private bool _isDelayFinished = false;
 

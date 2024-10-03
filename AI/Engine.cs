@@ -14,6 +14,9 @@ namespace ChessGame.AI
         private GraphicsDevice _graphicsDevice;
         private ContentManager _content;
         private int _depth;
+        private const int MAX_QUIESCENCE_DEPTH = 1;
+
+
 
 
         public ChessEngine(Player color, GraphicsDevice graphicsDevice, ContentManager content, int depth)
@@ -48,6 +51,18 @@ namespace ChessGame.AI
             }
 
         }
+
+        private bool BoardIsQuiet(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+        {
+            for (int i = 0; i < chessPieces.Count; i++)
+            {
+                ChessPiece piece = chessPieces[i];
+                if (piece.GetCaptureCheckMoves(chessBoard, chessPieces).Count != 0)
+                    return false;
+            }
+            return true;
+        }
+
 
         public void MakeRandomMove(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
@@ -118,14 +133,17 @@ namespace ChessGame.AI
 
             int evaluation = isMaxing ? int.MinValue : int.MaxValue;
             Player currentTurn = isMaxing ? this.Color : (this.Color == Player.White ? Player.Black : Player.White);
-            var playerPieces = chessPieces.Where(p => p.PieceColor == currentTurn).OrderBy(x => _random.Next()).ToList();
+            // add random moves for now as it plays in a dumb way where it moves the pieces in order when evaluation is the same 
+            var playerPieces = chessPieces.Where(p => p.PieceColor == Color).OrderBy(x => _random.Next()).ToList();
 
             // Base case: if we've reached the maximum depth or the game is over
-
             if (depth == 0 || ChessUtils.IsGameOver(chessBoard, chessPieces, currentTurn, out _))
             {
-                return EvaluateBoard(chessPieces);
+                return QuiescenceSearch(chessBoard, chessPieces, isMaxing, MAX_QUIESCENCE_DEPTH);
+
+                // return EvaluateBoard(chessPieces);
             }
+
             // Iterate over each piece and simulate its moves
             for (int i = 0; i < playerPieces.Count; i++)
             {
@@ -152,7 +170,7 @@ namespace ChessGame.AI
                     }
 
                     // Revert the move (restore the original state)
-                    piece.UndoMove(originalTile, originalLastTile, originalLastTurn);  
+                    piece.UndoMove(originalTile, originalLastTile, originalLastTurn);
 
                     // If a piece was captured, restore it
                     if (capturedPiece != null)
@@ -166,6 +184,55 @@ namespace ChessGame.AI
         }
 
 
+        private int QuiescenceSearch(List<ChessTile> chessBoard, List<ChessPiece> chessPieces, bool isMaxing, int quiescenceDepth)
+        {
+            int evaluation = EvaluateBoard(chessPieces);
+
+
+            Player currentTurn = isMaxing ? this.Color : (this.Color == Player.White ? Player.Black : Player.White);
+            var playerPieces = chessPieces.Where(p => p.PieceColor == currentTurn).ToList();
+
+            if (BoardIsQuiet(chessBoard, chessPieces) || ChessUtils.IsGameOver(chessBoard, chessPieces, currentTurn, out _) || quiescenceDepth == 0)
+            {
+                Console.WriteLine("Quiescence search ended");
+                return evaluation;
+            }
+
+            for (int i = 0; i < playerPieces.Count; i++)
+            {
+                ChessPiece piece = playerPieces[i];
+
+                List<ChessTile> legalMoves = piece.GetCaptureCheckMoves(chessBoard, chessPieces);
+
+                foreach (ChessTile legalMove in legalMoves)
+                {
+                    // Store the original state
+                    ChessTile originalTile = piece.HomeTile;
+                    ChessTile originalLastTile = piece.LastTile;
+                    int originalLastTurn = piece.LastMovedTurn;
+
+                    ChessPiece capturedPiece = piece.MoveTo(legalMove, chessBoard, chessPieces);
+                    // Recursively call with the simulated board state
+                    int newEvaluation = QuiescenceSearch(chessBoard, chessPieces, !isMaxing, quiescenceDepth - 1);
+
+                    // Update evaluation based on maximizing/minimizing
+                    if (isMaxing && newEvaluation > evaluation || !isMaxing && newEvaluation < evaluation)
+                    {
+                        evaluation = newEvaluation;
+                    }
+                    // Revert the move
+                    piece.UndoMove(originalTile, originalLastTile, originalLastTurn);
+                    // If a piece was captured, restore it
+                    if (capturedPiece != null)
+                    {
+                        chessPieces.Add(capturedPiece);
+                        capturedPiece.LoadContent(_graphicsDevice, _content);
+                    }
+
+                }
+            }
+            return evaluation;
+        }
     }
 
 }

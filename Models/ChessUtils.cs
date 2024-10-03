@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace ChessGame.Models
 {
@@ -24,29 +25,13 @@ namespace ChessGame.Models
         }
 
 
-        public static bool IsPieceUnderAttack(ChessPiece testPiece, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
-        {
-            var pieceTile = testPiece.HomeTile;
-            foreach (var piece in chessPieces)
-            {
-                if (piece.PieceColor != testPiece.PieceColor)
-                {
-                    var moves = piece.GetLegalMoves(chessBoard, chessPieces);
-                    if (moves.Contains(pieceTile))
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
 
         public static bool IsGameOver(List<ChessTile> chessBoard, List<ChessPiece> chessPieces, Player currentPlayer, out string Message)
         {
             Message = null;
             if (IsCheckmate(currentPlayer, chessBoard, chessPieces))
             {
-                Message = PlayerUtils.Opponent(currentPlayer)+ " won!";
+                Message = PlayerUtils.Opponent(currentPlayer) + " won!";
                 return true;
             }
 
@@ -56,25 +41,6 @@ namespace ChessGame.Models
                 return true;
             }
 
-            return false;
-        }
-
-        public static bool IsKingInCheck(ChessPiece king, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
-        {
-            // Check if any current player's piece is putting the king in check
-            for (int i = 0; i < chessPieces.Count; i++)
-            {
-                ChessPiece piece = chessPieces[i];
-                if (piece.PieceColor != king.PieceColor)
-                {
-                    var opponentMoves = piece.GetLegalMoves(chessBoard, chessPieces); // Get all legal moves of the piece
-
-                    if (opponentMoves.Contains(king.HomeTile))
-                    {
-                        return true; // The king is under attack
-                    }
-                }
-            }
             return false;
         }
 
@@ -95,7 +61,7 @@ namespace ChessGame.Models
             }
 
             var king = playerPieces.FirstOrDefault(p => p.Type == "king");
-            return king != null && IsKingInCheck(king, chessBoard, chessPieces);
+            return king != null && king.IsUnderAttack(chessBoard, chessPieces);
         }
 
         // Check if the current player is in stalemate
@@ -106,7 +72,7 @@ namespace ChessGame.Models
 
             // Check if the king is in check
             var king = playerPieces.FirstOrDefault(p => p.Type == "king");
-            if (king != null && IsKingInCheck(king, chessBoard, chessPieces))
+            if (king != null && king.IsUnderAttack(chessBoard, chessPieces))
             {
                 return false; // If the king is in check, it's not stalemate
             }

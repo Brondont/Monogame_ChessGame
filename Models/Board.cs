@@ -47,7 +47,6 @@ namespace ChessGame.Models
         private double updateInterval = 500;
 
 
-
         public string GameResult;
         public Player PlayerTurn { get; private set; } = Player.White;
         public bool IsInCheck { get; private set; } = false;
@@ -59,7 +58,7 @@ namespace ChessGame.Models
         {
             _font = font;
             _gameMode = gameMode;
-            _engineDepth = 3;
+            _engineDepth = 2;
 
             InitializeChessBoard();
             InitializeChessPieces();
@@ -191,7 +190,8 @@ namespace ChessGame.Models
                     {
                         // excute an engine move 
                         _engine.MakeRandomMove(_chessBoard, _chessPieces);
-                        UpdatePlayerTurnAndCheckStatus();
+                        UpdatePlayerTurn();
+                        CheckGameStatus();
                     }
                     else
                         PlayerMove(gameTime);
@@ -201,7 +201,8 @@ namespace ChessGame.Models
                     {
                         // excute an engine move 
                         _engine.MakeCaptureOnlyMove(_chessBoard, _chessPieces);
-                        UpdatePlayerTurnAndCheckStatus();
+                        UpdatePlayerTurn();
+                        CheckGameStatus();
                     }
                     else
                         PlayerMove(gameTime);
@@ -211,7 +212,8 @@ namespace ChessGame.Models
                     {
                         // excute an engine move 
                         _engine.Barbie(_chessBoard, _chessPieces);
-                        UpdatePlayerTurnAndCheckStatus();
+                        UpdatePlayerTurn();
+                        CheckGameStatus();
                     }
                     else
                         PlayerMove(gameTime);
@@ -227,7 +229,8 @@ namespace ChessGame.Models
                         _engine2.MakeCaptureOnlyMove(_chessBoard, _chessPieces);
 
                     }
-                    UpdatePlayerTurnAndCheckStatus();
+                    UpdatePlayerTurn();
+                    CheckGameStatus();
                     break;
                 case GameMode.CaptureOnlyMovesVsMinMaxMovesV1:
                     if (timeSinceLastUpdate >= updateInterval)
@@ -242,7 +245,8 @@ namespace ChessGame.Models
                             _engine2.Barbie(_chessBoard, _chessPieces);
 
                         }
-                        UpdatePlayerTurnAndCheckStatus();
+                        UpdatePlayerTurn();
+                        CheckGameStatus();
                         timeSinceLastUpdate = 0;
                     }
                     break;
@@ -256,7 +260,6 @@ namespace ChessGame.Models
             _currentMouse = Mouse.GetState();
 
             var mousePosition = new Vector2(_currentMouse.X, _currentMouse.Y);
-
 
             // execure player move 
             // update the pawn promotion menu instead if it exists
@@ -274,6 +277,7 @@ namespace ChessGame.Models
                 // dont detect board clicks if we are updating the promotion menu so we return early
                 return;
             }
+
 
             if (_prevMouse.LeftButton == ButtonState.Released && _currentMouse.LeftButton == ButtonState.Pressed)
             {
@@ -302,16 +306,12 @@ namespace ChessGame.Models
                 _ => null
             };
 
-            if (promotedPiece == null)
-            {
-                Console.WriteLine("Error: Invalid promotion selection");
-                return;
-            }
-
             // Replace the old pawn with the promoted piece
             _chessPieces.Remove(pieceToPromote);
             _chessPieces.Add(promotedPiece);
             promotedPiece.LoadContent(_graphicsDevice, _content);
+
+            CheckGameStatus();
         }
 
         private void SelectPiece(Vector2 mousePosition)
@@ -334,6 +334,7 @@ namespace ChessGame.Models
 
             _selectedPiece.IsSelected = false;
             _selectedPiece = capturedPiece;
+            _selectedPiece.IsSelected = true;
 
             _legalMoves = _selectedPiece.GetLegalSafeMoves(_chessBoard, _chessPieces);
             HighlightTiles(_legalMoves, true);
@@ -343,12 +344,13 @@ namespace ChessGame.Models
         private void MoveSelectedPiece(Vector2 mousePosition)
         {
             var newTile = GetTileAtPosition(mousePosition);
+
             if (newTile == null) return;
 
             var capturedPiece = GetPieceAtTile(newTile);
 
             // if the piece clicked is of the same color as the player select it instead
-            if (capturedPiece != null && capturedPiece.PieceColor == _selectedPiece.PieceColor)
+            if (capturedPiece != null && capturedPiece.PieceColor == PlayerTurn)
             {
                 ChangeSelectedPiece(capturedPiece);
                 return;
@@ -373,22 +375,16 @@ namespace ChessGame.Models
                     Globals.MoveRule50 = 0;
                     if (newTileIndex > 55 || newTileIndex < 8)
                     {
-                        // create paw promotion menu
+                        // create pawn promotion menu
                         _pawnPromotionMenu = new PromotionMenu(_selectedPiece, _font, 100, newTile.Position, _ScreenHeight);
                         _pawnPromotionMenu.LoadContent(_content);
                     }
                 }
 
                 capturedPiece = _selectedPiece.MoveTo(newTile, _chessBoard, _chessPieces);
-                if (capturedPiece != null)
-                    Globals.MoveRule50 = 0;
 
-                UpdatePlayerTurnAndCheckStatus();
-
-                // Clear highlighted tiles and reset the selected piece
-                HighlightTiles(_legalMoves, false);
-                _selectedPiece.IsSelected = false;
-                _selectedPiece = null;
+                UpdatePlayerTurn();
+                CheckGameStatus();
             }
         }
 
@@ -400,16 +396,29 @@ namespace ChessGame.Models
             }
         }
 
-        private void UpdatePlayerTurnAndCheckStatus()
+        private void UpdatePlayerTurn()
         {
             PlayerTurn = PlayerTurn == Player.Black ? Player.White : Player.Black;
+            Console.WriteLine($"changed player turn to {PlayerTurn}");
+
+            // Clear highlighted tiles and reset the selected piece
+            if (_selectedPiece != null) // this check is for engine moves as they dont update selected piece 
+            {
+                HighlightTiles(_legalMoves, false);
+                _selectedPiece.IsSelected = false;
+                _selectedPiece = null;
+            }
+        }
+
+        private void CheckGameStatus()
+        {
             if (ChessUtils.IsGameOver(_chessBoard, _chessPieces, PlayerTurn, out GameResult))
             {
                 PlayerTurn = Player.None;
                 return;
             }
-
         }
+
 
         public void Draw(SpriteBatch spriteBatch)
         {

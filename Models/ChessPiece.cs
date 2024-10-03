@@ -57,10 +57,28 @@ namespace ChessGame.Models
             }
         }
 
-        public void UndoMove(ChessTile oldTile, ChessTile oldLastTile, int oldLastMovedTurn) {
-          HomeTile = oldTile;
-          LastTile = oldLastTile;
-          LastMovedTurn = oldLastMovedTurn; 
+        public bool IsUnderAttack(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+        {
+            for (int i = 0; i < chessPieces.Count; i++)
+            {
+                ChessPiece piece = chessPieces[i];
+                if (piece.PieceColor != this.PieceColor)
+                {
+                    var moves = piece.GetLegalMoves(chessBoard, chessPieces);
+                    if (moves.Contains(this.HomeTile))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public void UndoMove(ChessTile homeTile, ChessTile lastTile, int lastMovedTurn)
+        {
+            HomeTile = homeTile;
+            LastTile = lastTile;
+            LastMovedTurn = lastMovedTurn;
         }
 
         public ChessPiece MoveTo(ChessTile newTile, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
@@ -77,11 +95,11 @@ namespace ChessGame.Models
             // capture the piece at destination if exists
             if (capturedPiece != null)
             {
+                Globals.MoveRule50 = 0;
                 chessPieces.Remove(capturedPiece);
                 Console.WriteLine($"Capture happened to {capturedPiece.PieceColor} {capturedPiece.Type} by {this.PieceColor} {this.Type}");
             }
-            else
-            {
+            else {
                 // handle special capture case of en passant
                 if (this.Type == "pawn")
                 {
@@ -118,12 +136,25 @@ namespace ChessGame.Models
             return safeMoves;
         }
 
+        public List<ChessTile> GetCaptureCheckMoves(List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
+        {
+            List<ChessTile> legalMoves = this.GetLegalSafeMoves(chessBoard, chessPieces);
+
+            List<ChessTile> legalCaptureCheckMoves = legalMoves.Where(tile =>
+            {
+                ChessPiece piece = ChessUtils.GetPieceAtTile(tile, chessPieces);
+                return piece != null && piece.PieceColor != this.PieceColor;
+            }).ToList();
+
+            return legalCaptureCheckMoves;
+        }
+
+
         // checks if the move causes king to be in check
         public bool IsSafeMove(ChessTile targetTile, List<ChessTile> chessBoard, List<ChessPiece> chessPieces)
         {
             // Save the current state
             ChessTile originalTile = this.HomeTile;
-            ChessPiece capturedPiece = ChessUtils.GetPieceAtTile(targetTile, chessPieces);
 
 
             ChessPiece king = chessPieces.FirstOrDefault(p => p.Type == "king" && p.PieceColor == this.PieceColor);
@@ -151,17 +182,17 @@ namespace ChessGame.Models
                 }
             }
 
-            // Simulate the move
-            this.HomeTile = targetTile;
-            if (capturedPiece != null)
-            {
-                chessPieces.Remove(capturedPiece);
-            }
+            // store state of piece
+            ChessTile savedHomeTile = this.HomeTile;
+            ChessTile savedLastTile = this.LastTile;
+            int savedLastMovedTurn = this.LastMovedTurn;
 
+            // Simulate the move
+            ChessPiece capturedPiece = this.MoveTo(targetTile, chessBoard, chessPieces);
             // Check if the king is in check
-            bool isInCheck = ChessUtils.IsPieceUnderAttack(king, chessBoard, chessPieces);
+            bool isInCheck = king.IsUnderAttack(chessBoard, chessPieces);
             // Revert the move
-            this.HomeTile = originalTile;
+            this.UndoMove(savedHomeTile, savedLastTile, savedLastMovedTurn);
 
             if (capturedPiece != null)
             {
@@ -172,7 +203,7 @@ namespace ChessGame.Models
             if (rook != null)
             {
                 // rook isnt under attack after the move and the king isnt currently in check
-                castlsePossible = ChessUtils.IsPieceUnderAttack(rook, chessBoard, chessPieces) && ChessUtils.IsPieceUnderAttack(rook, chessBoard, chessPieces);
+                castlsePossible = rook.IsUnderAttack(chessBoard, chessPieces);
                 rook.HomeTile = rookOriginalTile;
             }
             return !isInCheck && !castlsePossible;
